@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS TransferredPoints
     FOREIGN KEY (CheckedPeer) REFERENCES Peers (Nickname)
 );
 
-INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount) VALUES 
+INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount) VALUES  -- через запрос к p2p???
     (1,'kennethgraham','nancymartinez', 1),
     (2,'kennethgraham','laurenwood', 1),
     (3,'kennethgraham','troybrown', 1),
