@@ -1,10 +1,16 @@
 CREATE DATABASE model_s21;
 
-DROP TABLE IF EXISTS Peers;
 DROP TABLE IF EXISTS Friends;
 DROP TABLE IF EXISTS TransferredPoints;
 DROP TABLE IF EXISTS Recommendations;
 DROP TABLE IF EXISTS TimeTracking;
+DROP TABLE IF EXISTS Peers;
+
+TRUNCATE TABLE  Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
+TRUNCATE TABLE  Friends;
+TRUNCATE TABLE  TransferredPoints;
+TRUNCATE TABLE Recommendations;
+TRUNCATE TABLE TimeTracking;
 
 CREATE TABLE  Peers 
 (
@@ -25,7 +31,9 @@ CREATE TABLE IF NOT EXISTS Friends
 (
     ID BIGINT PRIMARY KEY DEFAULT 0,
     Peer1 VARCHAR NOT NULL,
-    Peer2 VARCHAR NOT NULL
+    Peer2 VARCHAR NOT NULL,
+    FOREIGN KEY (Peer1) REFERENCES Peers (Nickname),
+    FOREIGN KEY (Peer2) REFERENCES Peers (Nickname)
 );
 
 
@@ -39,10 +47,12 @@ INSERT INTO Friends (id, Peer1, Peer2) VALUES
 
 CREATE TABLE IF NOT EXISTS TransferredPoints
 (
-    ID BIGINT PRIMARY KEY DEFAULT 0,
-    CheckingPeer VARCHAR,
-    CheckedPeer VARCHAR,
-    PointsAmount BIGINT DEFAULT 0
+    ID BIGINT PRIMARY KEY DEFAULT 0, -- generation??
+    CheckingPeer VARCHAR NOT NULL,
+    CheckedPeer VARCHAR NOT NULL,
+    PointsAmount BIGINT DEFAULT 0,
+    FOREIGN KEY (CheckingPeer) REFERENCES Peers (Nickname),
+    FOREIGN KEY (CheckedPeer) REFERENCES Peers (Nickname)
 );
 
 INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount) VALUES 
@@ -56,7 +66,9 @@ CREATE TABLE IF NOT EXISTS Recommendations
 (
     ID BIGINT PRIMARY KEY DEFAULT 0,
     Peer VARCHAR NOT NULL,
-    RecommendedPeer VARCHAR NOT NULL
+    RecommendedPeer VARCHAR NOT NULL,
+    FOREIGN KEY (Peer) REFERENCES Peers (Nickname),
+    FOREIGN KEY (RecommendedPeer) REFERENCES Peers (Nickname)
 );
 
 INSERT INTO Recommendations (id, Peer, RecommendedPeer) VALUES 
@@ -66,13 +78,15 @@ INSERT INTO Recommendations (id, Peer, RecommendedPeer) VALUES
     (4,'nancywilson', 'laurenwood'),
     (5,'laurenwood', 'troybrown');
 
+
 CREATE TABLE IF NOT EXISTS TimeTracking
 (
     ID BIGINT PRIMARY KEY DEFAULT 0,
     Peer VARCHAR NOT NULL,
     "Date" DATE DEFAULT  CURRENT_TIMESTAMP::DATE,
     "Time" TIME  DEFAULT  CURRENT_TIMESTAMP::TIME,
-    "State" SMALLINT DEFAULT 1 check ("State" IN (1 ,2))
+    "State" SMALLINT DEFAULT 1 check ("State" IN (1, 2)),
+    FOREIGN KEY (Peer) REFERENCES Peers (Nickname)
 );
 
 INSERT INTO TimeTracking (id, Peer, "Date", "Time", "State") VALUES 
