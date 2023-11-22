@@ -1,16 +1,75 @@
 -- CREATE DATABASE model_s21;
+
+
+-- DROP ALL
 DROP TABLE IF EXISTS Friends;
 DROP TABLE IF EXISTS TransferredPoints;
 DROP TABLE IF EXISTS Recommendations;
 DROP TABLE IF EXISTS TimeTracking;
+DROP TABLE IF EXISTS p2p;
+DROP TABLE IF EXISTS checks CASCADE ;
+DROP TABLE IF EXISTS Verter;
+DROP TABLE IF EXISTS xp;
+DROP TABLE IF EXISTS tasks;
+DROP SEQUENCE IF EXISTS id_for_checks CASCADE ;
+DROP SEQUENCE IF EXISTS id_for_p2p CASCADE;
+DROP SEQUENCE IF EXISTS id_for_verter CASCADE;
+DROP SEQUENCE IF EXISTS id_for_xp CASCADE;
+DROP TYPE IF EXISTS check_state CASCADE;
 DROP TABLE IF EXISTS Peers;
 
--- TRUNCATE TABLE  Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
--- TRUNCATE TABLE  Friends;
--- TRUNCATE TABLE  TransferredPoints;
--- TRUNCATE TABLE Recommendations;
--- TRUNCATE TABLE TimeTracking;
+DROP FUNCTION IF EXISTS p2p_success CASCADE;
+DROP FUNCTION IF EXISTS Verter_succes CASCADE;
+DROP FUNCTION IF EXISTS xp_lq_max CASCADE;
 
+-- FUNCTIONS CHECK
+CREATE OR REPLACE FUNCTION p2p_success("checks_id" BIGINT)
+RETURNS BOOLEAN AS
+$$
+BEGIN
+IF 'success' IN (SELECT "state" FROM p2p WHERE "check" = "checks_id")
+THEN RETURN true;
+ELSE RETURN false;
+END IF;
+END;
+$$ LANGUAGE PLpgSQL;
+
+
+CREATE OR REPLACE FUNCTION Verter_success(id_for_check BIGINT) RETURNS boolean
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    IF (SELECT state FROM Verter v WHERE v."check" = id_for_check AND v.state != 'start') = 'success'
+    THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION xp_lq_max("check" BIGINT, xp_amount SMALLINT) RETURNS boolean
+    LANGUAGE plpgsql AS
+    $$
+    BEGIN
+        IF (SELECT max_xp
+            FROM tasks t,
+                 checks ch
+            WHERE t.title = ch.task
+              AND "check" = ch.id) >= xp_amount THEN
+            RETURN TRUE;
+            ELSE
+            RETURN FALSE;
+        END IF;
+        END;
+    $$;
+
+-- CREATE ALL 
+CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
+CREATE SEQUENCE id_for_p2p;
+CREATE SEQUENCE id_for_checks;
+CREATE SEQUENCE id_for_verter;
+CREATE SEQUENCE id_for_xp;
 CREATE TABLE Peers (
     Nickname VARCHAR NOT NULL PRIMARY KEY UNIQUE,
     Birthday DATE NOT NULL default current_date::DATE
@@ -51,6 +110,48 @@ CREATE TABLE IF NOT EXISTS Recommendations (
     FOREIGN KEY (RecommendedPeer) REFERENCES Peers (Nickname)
 );
 
+CREATE TABLE IF NOT EXISTS Tasks (
+    "title" varchar PRIMARY KEY,
+    parent_task varchar,
+    max_xp smallint DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS Checks (
+    id bigint PRIMARY KEY DEFAULT nextval('id_for_checks'),
+    peer varchar NOT NULL,
+    task varchar NOT NULL,
+    "date" date NOT NULL DEFAULT current_date,
+    FOREIGN KEY (peer) references Peers(nickname),
+    FOREIGN KEY (task) references tasks(title)
+);
+
+CREATE TABLE IF NOT EXISTS p2p (
+    id bigint PRIMARY KEY DEFAULT nextval('id_for_p2p'),
+    "check" bigint NOT NULL,
+    CheckingPeer varchar NOT NULL,
+    "state" check_state DEFAULT 'start'::check_state,
+    "time" time NOT NULL DEFAULT current_time,
+    FOREIGN KEY ("check") references checks(id),
+    FOREIGN KEY (CheckingPeer) references Peers(nickname)
+);
+
+CREATE TABLE IF NOT EXISTS Verter (
+  id bigint PRIMARY KEY DEFAULT nextval('id_for_verter'),
+  "check" bigint NOT NULL,
+  "state" check_state DEFAULT 'start'::check_state,
+  "time" time DEFAULT current_time,
+  FOREIGN KEY ("check") references checks(id)
+);
+
+CREATE TABLE IF NOT EXISTS Xp (
+    id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'), 
+    "check"   bigint NOT NULL check ( Verter_success("check") ),
+    XP_amount smallint NOT NULL check ( xp_lq_max("check", XP_amount) ),
+    FOREIGN KEY ("check") references checks(id));
+
+
+
+-- INSERT data
 INSERT INTO Peers (Nickname, Birthday)
 VALUES ('kennethgraham', '1999-10-23'),
     ('nancywilson', '1978-06-08'),
@@ -70,22 +171,6 @@ VALUES ('kennethgraham', 'nancymartinez'),
     ('nancywilson', 'laurenwood'),
     ('laurenwood', 'nancymartinez');
     
-INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
-VALUES -- через запрос к p2p???
-    (1, 'kennethgraham', 'nancymartinez', 1),
-    (2, 'kennethgraham', 'laurenwood', 1),
-    (3, 'kennethgraham', 'troybrown', 1),
-    (4, 'nancywilson', 'laurenwood', 2),
-    (5, 'laurenwood', 'nancywilson', 2);
-
--- INSERT INTO TransferredPoints
--- VALUES 
--- (
---     (SELECT max(id) + 1 FROM  TransferredPoints),
---     SELECT p2p.CheckingPeer, Checks.Peer, COALESCE(count(*)+1, 1)
---     FROM p2p JOIN comments ON p2p.Check = Checks.Id JOIN TransferredPoints AS tp
---     GROUP BY tp.checkingpeer, p2p.CheckingPeer, tp.checkedpeer, Checks.Peer
--- );
 
 INSERT INTO Recommendations (id, Peer, RecommendedPeer)
 VALUES (1, 'laurenwood', 'nancymartinez'),
@@ -99,3 +184,121 @@ VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (3, 'laurenwood', '2022-12-23', '14:19', 1),
     (4, 'laurenwood', '2022-12-23', '19:43', 2),
     (5, 'nancywilson', '2022-12-23', '22:04', 1);
+
+INSERT INTO tasks(title, parent_task, max_xp)
+VALUES ('CPP1_s21_matrix+', NULL, 300),
+       ('CPP2_s21_containers', 'CPP1_s21_matrix+', 350),
+       ('CPP3_SmartCalc_v2.0', 'CPP2_s21_containers+', 600),
+       ('CPP4_3DViewer_v2.0', 'CPP3_SmartCalc_v2.0', 750),
+       ('CPP5_3DViewer_v2.1', 'CPP4_3DViewer_v2.0', 600),
+       ('CPP6_3DViewer_v2.2', 'CPP5_3DViewer_v2.1', 800),
+       ('CPP7_MLP', 'CPP6_3DViewer_v2.2', 700),
+       ('CPP8_PhotoLab_v1.0', 'CPP7_MLP', 450),
+       ('CPP9_MonitoringSystem', 'CPP8_PhotoLab_v1.0', 1000),
+       ('CPPE', 'CPP9_MonitoringSystem', 400),
+       ('A1_MAZE', 'CPP3_SmartCalc_v2.0', 300),
+       ('A2_SimpleNavigator v1.0', 'A1_MAZE', 400),
+       ('A3_Parallels', 'A2_SimpleNavigator v1.0', 300),
+       ('A4_Crypto', 'A3_Parallels', 350),
+       ('A5_s21_memory', 'A4_Crypto', 400),
+       ('A6_Transactions', 'A4_Crypto', 700),
+       ('A7_DNA_Analyser', 'A6_Transactions', 800),
+       ('A8_Algorithmic_trading', 'A7_DNA_Analyser', 800);
+
+INSERT INTO checks (peer, task, date)
+VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
+       ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-04'),
+       ('nancywilson', 'CPP1_s21_matrix+', '2023-01-02'),
+       ('troybrown', 'CPP1_s21_matrix+', '2023-01-10'),
+       ('kennethgraham', 'CPP2_s21_containers', '2023-01-20'),
+       ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30');
+
+INSERT INTO p2p ("check", CheckingPeer, "state", "time")
+VALUES (1, 'nancymartinez', DEFAULT, current_time),
+       (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
+       (2, 'nancywilson', DEFAULT, current_time + '01:30:00'::time),
+       (2, 'nancywilson', 'success', current_time + '02:00:00'::time),
+       (3, 'kennethgraham', DEFAULT, current_time + '11:30:00'::time),
+       (3, 'kennethgraham', 'success', current_time + '11:55:00'::time),
+       (4, 'laurenwood', DEFAULT, current_time + '07:10:00'::time),
+       (4, 'laurenwood', 'success', current_time + '07:43:00'::time),
+       (5, 'nancywilson', DEFAULT, current_time + '03:33:33'::time),
+       (5, 'nancywilson', 'success', current_time + '04:00:33'::time),
+       (6, 'frankray', DEFAULT, current_time + '05:05:05'::time),
+       (6, 'frankray', 'success', current_time + '05:55:05'::time);
+
+
+-- INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
+--     SELECT p2p.CheckingPeer, Checks.Peer, count(*)
+--     FROM p2p JOIN checks ON p2p.Check = Checks.Id 
+--     WHERE p2p."state" != 'start'
+--     GROUP BY  p2p.CheckingPeer, checks.Peer;
+
+INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
+VALUES 
+    (1, 'nancywilson', 'kennethgraham', 2),
+    (2, 'frankray', 'kennethgraham', 1),
+    (3, 'kennethgraham', 'nancywilson', 1),
+    (4, 'laurenwood', 'troybrown', 1),
+    (5, 'nancymartinez', 'kennethgraham', 1);
+
+INSERT INTO Verter ("check", "state", "time")
+VALUES (2, DEFAULT, current_time + '02:00:11'::time),
+       (2, 'success', current_time + '02:00:50'::time),
+       (3, DEFAULT, current_time + '11:55:11'::time),
+       (3, 'success', current_time + '11:55:30'::time),
+       (4, DEFAULT, current_time + '07:43:11'::time),
+       (4, 'success', current_time + '07:43:55'::time),
+       (5, DEFAULT, current_time + '04:01:00'::time),
+       (5, 'success', current_time + '04:01:55'::time),
+       (6, DEFAULT, current_time + '05:55:35'::time),
+       (6, 'success', current_time + '05:56:05'::time);
+
+
+INSERT INTO xp ("check", XP_amount) -- добавить  ограничение на макс хр
+VALUES (2, 299),
+       (3, 300),
+       (4, 255),
+       (5, 200),
+       (6, 600);
+
+
+
+
+-- FUNCTIONS IMPORT and EXPORT  !!!!! GO
+
+
+-- CREATE OR REPLACE PROCEDURE export_to...()
+-- CREATE OR REPLACE PROCEDURE import_to...()
+
+
+
+
+
+
+--Clean tables (!need add other tables!)
+
+-- TRUNCATE TABLE  Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
+-- TRUNCATE TABLE  Friends;
+-- TRUNCATE TABLE  TransferredPoints;
+-- TRUNCATE TABLE Recommendations;
+-- TRUNCATE TABLE TimeTracking;
+-- TRUNCATE TABLE Verter;
+--
+--
+--
+--
+
+
+
+-- INSERT INTO Verter ("check", "state", "time")
+-- VALUES (2, DEFAULT, current_time + '02:00:11'::time),
+--     (2, DEFAULT, current_time + '02:00:11'::time);
+-- SELECT datname FROM pg_database WHERE datname = 'model_s21';
+
+-- SELECT pg_database_size(current_database());
+-- SELECT pg_database_size('model_s21');
+-- SELECT pg_size_pretty(pg_database_size(current_database()));
+
+-- SELECT table_name FROM information_schema.tables
+-- WHERE table_schema NOT IN ('information_schema','pg_catalog');
