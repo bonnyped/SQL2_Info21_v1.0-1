@@ -265,11 +265,17 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30');
 
 INSERT INTO p2p ("check", checking_peer, "state", "time")
-VALUES (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
+VALUES (1, 'nancymartinez', DEFAULT, current_time),
+       (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
+       (2, 'nancywilson', DEFAULT, current_time + '01:30:00'::time),
        (2, 'nancywilson', 'success', current_time + '02:00:00'::time),
+       (3, 'kennethgraham', DEFAULT, current_time + '11:30:00'::time),
        (3, 'kennethgraham', 'success', current_time + '11:55:00'::time),
+       (4, 'laurenwood', DEFAULT, current_time + '07:10:00'::time),
        (4, 'laurenwood', 'success', current_time + '07:43:00'::time),
+       (5, 'nancywilson', DEFAULT, current_time + '03:33:33'::time),
        (5, 'nancywilson', 'success', current_time + '04:00:33'::time),
+       (6, 'nancymartinez', DEFAULT, current_time + '05:05:05'::time),
        (6, 'nancymartinez', 'success', current_time + '05:55:05'::time);
 
 
@@ -289,9 +295,13 @@ VALUES
 
 INSERT INTO verter ("check", "state", "time")
 VALUES (2, 'success', current_time + '02:00:50'::time),
+       (3, DEFAULT, current_time + '11:55:11'::time),
        (3, 'success', current_time + '11:55:30'::time),
+       (4, DEFAULT, current_time + '07:43:11'::time),
        (4, 'success', current_time + '07:43:55'::time),
+       (5, DEFAULT, current_time + '04:01:00'::time),
        (5, 'success', current_time + '04:01:55'::time),
+       (6, DEFAULT, current_time + '05:55:35'::time),
        (6, 'success', current_time + '05:56:05'::time);
 
 
