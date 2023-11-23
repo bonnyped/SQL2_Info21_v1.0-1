@@ -22,6 +22,57 @@ DROP FUNCTION IF EXISTS p2p_success CASCADE;
 DROP FUNCTION IF EXISTS Verter_succes CASCADE;
 DROP FUNCTION IF EXISTS xp_lq_max CASCADE;
 
+-- PROCEDURES EXPORT & IMPORT
+CREATE OR REPLACE PROCEDURE export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
+    LANGUAGE plpgsql AS
+$EXPORT_ALL_TABLES$
+DECLARE
+    tables    RECORD;
+    statement TEXT;
+BEGIN
+    FOR tables IN
+        SELECT ("current_schema"() || '.' || table_name) AS table_with_schema
+        FROM (SELECT DISTINCT table_name
+              from information_schema.columns
+              where table_schema = "current_schema"())
+        LOOP
+            statement := 'COPY ' || tables.table_with_schema || ' TO ''' || path || '/' || tables.table_with_schema ||
+                         '.csv' || ''' DELIMITER ' || quote_literal(delim) || 'CSV HEADER';
+            EXECUTE statement;
+        END LOOP;
+END;
+$EXPORT_ALL_TABLES$;
+
+CREATE OR REPLACE PROCEDURE export_table_to_csv(path TEXT, "table_name" TEXT, "delim" CHAR DEFAULT ',')
+    LANGUAGE plpgsql AS
+$EXPORT_TABLE$
+    DECLARE
+        schema_name VARCHAR DEFAULT "current_schema"();
+        statement TEXT;
+BEGIN
+    statement := 'COPY ' || schema_name || '.' || "table_name" || ' TO ''' || path || '/' || "table_name" || '.csv' || ''' DELIMITER ' || quote_literal("delim") || 'CSV HEADER';
+        EXECUTE statement;
+END;
+   $EXPORT_TABLE$;
+
+CREATE OR REPLACE PROCEDURE import_from_csv(in s21_table_name VARCHAR, in path_to_file text, delimiter_csv CHAR DEFAULT ',' )
+LANGUAGE plpgsql AS
+$IMPORT$
+BEGIN
+IF (
+        EXISTS (
+            SELECT *
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE table_name = s21_table_name
+        )
+    ) THEN
+    EXECUTE format('COPY  %s FROM ''%s''  DELIMITER  ''%s''  CSV HEADER;',s21_table_name,path_to_file, delimiter_csv);
+    ELSE RAISE EXCEPTION 'The table does not exist: %',
+    s21_table_name;
+    END IF;
+END;
+$IMPORT$;
+
 -- FUNCTIONS CHECK
 CREATE OR REPLACE FUNCTION p2p_success("checks_id" BIGINT)
 RETURNS BOOLEAN AS
