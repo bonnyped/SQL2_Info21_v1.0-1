@@ -21,8 +21,8 @@ BEGIN
 END;
     $DEPENDENCY_LOOKUP$;
 
-CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks TEXT, checking_peer_p2p TEXT,
-                                       task_checks TEXT, state_p2p check_state, time_to_checks time)
+CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checking_peer_p2p  VARCHAR(255),
+                                       task_checks  VARCHAR(255), state_p2p check_state, time_to_checks time)
     LANGUAGE plpgsql AS $ADDING_P2P$
     DECLARE
         needed_id BIGINT DEFAULT (SELECT max(c2.id)
