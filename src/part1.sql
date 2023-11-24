@@ -22,6 +22,10 @@ DROP FUNCTION IF EXISTS p2p_success CASCADE;
 DROP FUNCTION IF EXISTS Verter_succes CASCADE;
 DROP FUNCTION IF EXISTS xp_lq_max CASCADE;
 
+DROP PROCEDURE IF EXISTS  export_all_tables_to_csv;
+DROP PROCEDURE IF EXISTS  export_table_to_csv;
+DROP PROCEDURE IF EXISTS  import_from_csv;
+
 -- PROCEDURES EXPORT & IMPORT
 CREATE OR REPLACE PROCEDURE export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
@@ -36,21 +40,20 @@ BEGIN
               from information_schema.columns
               where table_schema = "current_schema"())
         LOOP
-            statement := 'COPY ' || tables.table_with_schema || ' TO ''' || path || '/' || tables.table_with_schema ||
-                         '.csv' || ''' DELIMITER ' || quote_literal(delim) || 'CSV HEADER';
+            statement := format('COPY %s to ''%s/%s.csv'' DELIMITER ''%s'' CSV HEADER;', tables.table_with_schema, path, tables.table_with_schema,  delim);
             EXECUTE statement;
         END LOOP;
 END;
 $EXPORT_ALL_TABLES$;
 
-CREATE OR REPLACE PROCEDURE export_table_to_csv(path TEXT, "table_name" TEXT, "delim" CHAR DEFAULT ',')
+CREATE OR REPLACE PROCEDURE export_table_to_csv(table_name_s21 TEXT, path_to_file TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_TABLE$
     DECLARE
         schema_name VARCHAR DEFAULT "current_schema"();
         statement TEXT;
 BEGIN
-    statement := 'COPY ' || schema_name || '.' || "table_name" || ' TO ''' || path || '/' || "table_name" || '.csv' || ''' DELIMITER ' || quote_literal("delim") || 'CSV HEADER';
+    statement := format('COPY %s.%s TO ''%s/%s.csv'' DELIMITER ''%s'' CSV HEADER;',schema_name, table_name_s21 , path_to_file, table_name_s21, "delim");
         EXECUTE statement;
 END;
    $EXPORT_TABLE$;
@@ -58,12 +61,14 @@ END;
 CREATE OR REPLACE PROCEDURE import_from_csv(in s21_table_name VARCHAR, in path_to_file text, delimiter_csv CHAR DEFAULT ',' )
 LANGUAGE plpgsql AS
 $IMPORT$
+DECLARE
+    c_schema_name VARCHAR DEFAULT "current_schema"();
 BEGIN
 IF (
         EXISTS (
-            SELECT *
+            SELECT table_catalog, table_schema, table_name, table_type
             FROM INFORMATION_SCHEMA.TABLES
-            WHERE table_name = s21_table_name
+            WHERE table_name = lower (s21_table_name) AND c_schema_name = table_schema AND lower(table_type) = 'base table'
         )
     ) THEN
     EXECUTE format('COPY  %s FROM ''%s''  DELIMITER  ''%s''  CSV HEADER;',s21_table_name,path_to_file, delimiter_csv);
@@ -264,7 +269,7 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('kennethgraham', 'CPP2_s21_containers', '2023-01-20'),
        ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30');
 
-INSERT INTO p2p ("check", checking_peer, "state", "time")
+INSERT INTO p2p ("check", checkingpeer, "state", "time")
 VALUES (1, 'nancymartinez', DEFAULT, current_time),
        (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
        (2, 'nancywilson', DEFAULT, current_time + '01:30:00'::time),
@@ -321,10 +326,11 @@ VALUES (2, 299),
 -- CREATE OR REPLACE PROCEDURE export_to...()
 -- CREATE OR REPLACE PROCEDURE import_to...()
 
-
-
-
-
+-- tests export/import
+CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+TRUNCATE TABLE  Friends;
+CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
 
 --Clean tables (!need add other tables!)
 
