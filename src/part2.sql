@@ -44,7 +44,59 @@ CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checki
 
 -- CALL adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
 
+CREATE OR REPLACE PROCEDURE dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
+LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
+    DECLARE
+        state_for_lookup check_state;
+        start_eq check_state := 'start';
+    BEGIN
+        SELECT "state"
+        INTO state_for_lookup
+            FROM verter v
+        WHERE v."check" = id_to_check
+        ORDER BY "time" DESC
+        LIMIT 1;
+        IF id_to_check IS NULL THEN
+            RAISE EXCEPTION '1 - There is no check in CHECKS and P2P TABLES with this parametrs'; 
+        ELSIF ((state_dep = start_eq AND state_for_lookup = start_eq) OR (state_dep != start_eq
+            AND state_for_lookup != start_eq)) THEN
+            RAISE EXCEPTION '2 - The inserting data is already inserted in VERTER TABLE';
+        ELSIF (state_dep = start_eq AND
+               id_to_check IN (SELECT v."check" FROM verter v WHERE v.state = state_dep)) THEN
+            RAISE EXCEPTION '3 - This verter check was already started in VERTER TABLE';
+        ELSIF (state_dep != start_eq AND
+               (SELECT v.state FROM verter v WHERE v."check" = id_to_check ORDER BY 1 LIMIT 1) !=
+               start_eq) THEN
+            RAISE EXCEPTION '4 - This verter check was already ended in VERTER TABLE';
+        ELSIF (SELECT p.state FROM p2p p WHERE p."check" = id_to_check ORDER BY p.time DESC LIMIT 1) !=
+               'success'::check_state THEN
+            RAISE EXCEPTION '5 - For this id from CHECKS TABLE there is no success passed p2p check in P2P TABLE';
+        END IF;
+        END;
+    $DEPENDENCY_LOOKUP_VERTER$;
 
+CREATE OR REPLACE PROCEDURE adding_verter(peer_from_checks VARCHAR(255), task_from_checks VARCHAR(255), "state_to_verter" check_state, "time_to_verter" time)
+LANGUAGE plpgsql AS $ADDING_VERTER$
+    DECLARE
+        id_from_checks BIGINT;
+    BEGIN
+        SELECT c.id foreign_key_for_verter
+        INTO id_from_checks
+        FROM checks c
+        JOIN p2p p on c.id = p."check" AND c.peer = peer_from_checks AND c.task = task_from_checks
+        ORDER BY c.date DESC, p.time DESC
+        LIMIT 1;
+        CALL dependency_lookup_for_verter(id_from_checks, "state_to_verter");
+        INSERT INTO verter ("check", "state", "time")
+        VALUES (id_from_checks, state_to_verter, "time_to_verter");
+    END;
+    $ADDING_VERTER$;
+
+-- CALL adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
+-- 
+-- DELETE FROM verter where id = 28;
+-- 
+-- DROP PROCEDURE adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
 
 CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
 RETURNS TRIGGER AS 
