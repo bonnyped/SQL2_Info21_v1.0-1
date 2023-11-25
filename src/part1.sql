@@ -27,6 +27,7 @@ DROP PROCEDURE IF EXISTS  export_table_to_csv;
 DROP PROCEDURE IF EXISTS  import_from_csv;
 
 -- PROCEDURES EXPORT & IMPORT
+
 CREATE OR REPLACE PROCEDURE export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_ALL_TABLES$
@@ -267,7 +268,10 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('nancywilson', 'CPP1_s21_matrix+', '2023-01-02'),
        ('troybrown', 'CPP1_s21_matrix+', '2023-01-10'),
        ('kennethgraham', 'CPP2_s21_containers', '2023-01-20'),
-       ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30');
+       ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30'),
+       ('frankray', 'CPP1_s21_matrix+', '2023-01-31'),
+       ('pamelawalker', 'CPP1_s21_matrix+', '2023-01-31'),
+       ('pamelawalker', 'CPP2_s21_containers', '2023-02-11');
 
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
 VALUES (1, 'nancymartinez', DEFAULT, current_time),
@@ -281,7 +285,13 @@ VALUES (1, 'nancymartinez', DEFAULT, current_time),
        (5, 'nancywilson', DEFAULT, current_time + '03:33:33'::time),
        (5, 'nancywilson', 'success', current_time + '04:00:33'::time),
        (6, 'nancymartinez', DEFAULT, current_time + '05:05:05'::time),
-       (6, 'nancymartinez', 'success', current_time + '05:55:05'::time);
+       (6, 'nancymartinez', 'success', current_time + '05:55:05'::time),
+       (7, 'pamelawalker', 'start', '22:45:13'::time),
+       (7, 'pamelawalker', 'success', '23:20:43'::time),
+       (8,'frankray', 'start', '12:45:23'::time),
+       (8,'frankray', 'success', '13:29:10'::time),
+       (9,'frankray', 'start', '09:30:24'::time),
+       (9,'frankray', 'success', '10:15:01'::time);
 
 
 -- INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
@@ -320,17 +330,21 @@ VALUES (2, 299),
 
 
 
--- FUNCTIONS IMPORT and EXPORT  !!!!! GO
 
 
--- CREATE OR REPLACE PROCEDURE export_to...()
--- CREATE OR REPLACE PROCEDURE import_to...()
 
--- tests export/import
-CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
-CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
-TRUNCATE TABLE  Friends;
-CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
+-- tests export/import !!!!!!!
+
+
+-- CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+-- CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+-- TRUNCATE TABLE  Friends;
+-- CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
+
+
+
+
+
 
 --Clean tables (!need add other tables!)
 
@@ -340,7 +354,7 @@ CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTC
 -- TRUNCATE TABLE Recommendations;
 -- TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE Verter;
---
+-- TRUNCATE TABLE p2p;
 --
 --
 --
