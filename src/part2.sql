@@ -44,3 +44,35 @@ CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checki
 
 -- CALL adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
 
+
+
+CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
+RETURNS TRIGGER AS 
+$TransferredPoints$ 
+DECLARE
+TO_BE BIGINT := (select t.id::BIGINT
+            From p2p As p 
+            JOIN checks AS c ON c.id = p.check 
+            join transferredpoints AS t ON c.peer = t.checkedpeer AND p.checkingpeer = t.checkingpeer
+            WHERE p.state = 'start' AND p.check = NEW."check");
+    BEGIN 
+        IF (TG_OP = 'INSERT' AND NEW."state" = 'start') THEN
+            IF ( TO_BE != 0 ) THEN
+                UPDATE TransferredPoints SET pointsamount = pointsamount + 1 WHERE id =  TO_BE;
+            ELSE 
+                INSERT INTO TransferredPoints (CheckingPeer,CheckedPeer, PointsAmount)
+                SELECT p2p.CheckingPeer, Checks.Peer, 1
+                FROM p2p JOIN checks ON p2p.Check = Checks.Id 
+                WHERE p2p."state" = 'start' AND p2p.check = NEW."check";
+            END IF;
+        END IF;
+        RETURN NULL;
+    END;
+$TransferredPoints$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_person_audit
+AFTER INSERT ON p2p
+    FOR EACH ROW EXECUTE FUNCTION fnc_trg_TransferredPoints();
+	
+
