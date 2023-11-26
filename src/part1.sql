@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS Xp (
 
 -- INSERT data
 INSERT INTO Peers (Nickname, Birthday)
-VALUES ('kennethgraham', '1999-10-23'),
+VALUES ('kennethgraham', '1999-02-23'),
     ('nancywilson', '1978-06-08'),
     ('troybrown', '1964-11-03'),
     ('laurenwood', '2004-02-29'),
@@ -240,7 +240,9 @@ VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (2, 'laurenwood', '2022-12-23', '14:02', 2),
     (3, 'laurenwood', '2022-12-23', '14:19', 1),
     (4, 'laurenwood', '2022-12-23', '19:43', 2),
-    (5, 'nancywilson', '2022-12-23', '22:04', 1);
+    (5, 'nancywilson', '2022-12-23', '22:04', 1),
+    (6, 'lloydmartin', '2022-12-24', '09:43', 1),
+    (7, 'nancywilson', '2022-12-24', '13:04', 2);
 
 INSERT INTO tasks(title, parent_task, max_xp)
 VALUES ('CPP1_s21_matrix+', NULL, 300),
@@ -271,7 +273,8 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30'),
        ('frankray', 'CPP1_s21_matrix+', '2023-01-31'),
        ('pamelawalker', 'CPP1_s21_matrix+', '2023-01-31'),
-       ('pamelawalker', 'CPP2_s21_containers', '2023-02-11');
+       ('pamelawalker', 'CPP2_s21_containers', '2023-02-11'),
+       ('kennethgraham', 'CPP2_s21_containers', '2023-02-23');
 
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
 VALUES (1, 'nancymartinez', DEFAULT, current_time),
@@ -291,22 +294,24 @@ VALUES (1, 'nancymartinez', DEFAULT, current_time),
        (8,'frankray', 'start', '12:45:23'::time),
        (8,'frankray', 'success', '13:29:10'::time),
        (9,'frankray', 'start', '09:30:24'::time),
-       (9,'frankray', 'success', '10:15:01'::time);
+       (9,'frankray', 'success', '10:15:01'::time),
+       (10,'frankray', 'start', '16:17:41'::time),
+       (10,'frankray', 'success', '16:50:41'::time);;
 
 
--- INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
---     SELECT p2p.CheckingPeer, Checks.Peer, count(*)
---     FROM p2p JOIN checks ON p2p.Check = Checks.Id 
---     WHERE p2p."state" != 'start'
---     GROUP BY  p2p.CheckingPeer, checks.Peer;
+INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
+    SELECT p2p.CheckingPeer, Checks.Peer, count(*)
+    FROM p2p JOIN checks ON p2p.Check = Checks.Id 
+    WHERE p2p."state" != 'start'
+    GROUP BY  p2p.CheckingPeer, checks.Peer;
 
-INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
-VALUES 
-    (1, 'nancywilson', 'kennethgraham', 2),
-    (2, 'frankray', 'kennethgraham', 1),
-    (3, 'kennethgraham', 'nancywilson', 1),
-    (4, 'laurenwood', 'troybrown', 1),
-    (5, 'nancymartinez', 'kennethgraham', 1);
+-- INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
+-- VALUES 
+--     (1, 'nancywilson', 'kennethgraham', 2),
+--     (2, 'frankray', 'kennethgraham', 1),
+--     (3, 'kennethgraham', 'nancywilson', 1),
+--     (4, 'laurenwood', 'troybrown', 1),
+--     (5, 'nancymartinez', 'kennethgraham', 1);
 
 INSERT INTO verter ("check", "state", "time")
 VALUES (2, 'success', current_time + '02:00:50'::time),
@@ -317,7 +322,9 @@ VALUES (2, 'success', current_time + '02:00:50'::time),
        (5, DEFAULT, current_time + '04:01:00'::time),
        (5, 'success', current_time + '04:01:55'::time),
        (6, DEFAULT, current_time + '05:55:35'::time),
-       (6, 'success', current_time + '05:56:05'::time);
+       (6, 'success', current_time + '05:56:05'::time),
+       (10, 'start', '16:50:41'::time),
+       (10, 'success', '16:51:01'::time);
 
 
 INSERT INTO xp ("check", XP_amount) -- добавить  ограничение на макс хр
@@ -325,7 +332,8 @@ VALUES (2, 299),
        (3, 300),
        (4, 255),
        (5, 200),
-       (6, 600);
+       (6, 600),
+       (10, 350);;
 
 
 
@@ -355,7 +363,7 @@ VALUES (2, 299),
 -- TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE Verter;
 -- TRUNCATE TABLE p2p;
---
+-- TRUNCATE TABLE XP;
 --
 --
 
