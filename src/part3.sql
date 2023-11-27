@@ -4,24 +4,23 @@ DROP FUNCTION IF EXISTS fnc_checks_task_xp;
 DROP FUNCTION IF EXISTS fnc_hardworking_peers;
 DROP FUNCTION IF EXISTS  fnc_points_traffic_all;
 DROP FUNCTION IF EXISTS  fnc_points_traffic;
+DROP FUNCTION IF EXISTS fnc_point_changes;
 
 ----------- 01 -----------
+
 CREATE OR REPLACE FUNCTION fnc_TransferredPointsStatistic() RETURNS TABLE(
         "Peer1" VARCHAR,
         "Peer2" VARCHAR,
         "PointsAmount" BIGINT
-    ) LANGUAGE plpgsql AS
-    $STATISTIC_POINTS$ 
-    BEGIN 
-    RETURN QUERY 
-    WITH mutual_checks AS (
+    ) LANGUAGE plpgsql AS 
+$STATISTIC_POINTS$
+BEGIN 
+RETURN QUERY 
+WITH mutual_checks AS (
         SELECT tp.id,
             tp.checkingpeer AS Peer1,
             tp.checkedpeer AS Peer2,
-            CASE
-                WHEN tp2.Pointsamount > tp.Pointsamount THEN (tp.Pointsamount - tp2.Pointsamount)
-                ELSE tp.Pointsamount
-            END AS Pointsamount
+            (tp.Pointsamount - tp2.Pointsamount) AS Pointsamount
         FROM TransferredPoints AS tp
             JOIN transferredpoints AS tp2 ON tp.checkingpeer = tp2.checkedpeer
             AND tp.checkedpeer = tp2.checkingpeer
@@ -46,9 +45,11 @@ CREATE OR REPLACE FUNCTION fnc_TransferredPointsStatistic() RETURNS TABLE(
     without_checks AS (
         SELECT nrc.Peer2 AS Peer1,
             nrc.Peer1 AS Peer2,
-            0 AS PointsAmount
+            - tt.pointsamount AS PointsAmount
         FROM non_reciprocal_checks AS nrc
             JOIN transferredpoints AS tp4 ON nrc.id = tp4.id
+            JOIN transferredpoints AS tt ON tt.checkingpeer = nrc.Peer1
+            AND nrc.Peer2 = tt.checkedpeer
         UNION
         SELECT n.Peer1,
             n.Peer2,
@@ -62,7 +63,7 @@ CREATE OR REPLACE FUNCTION fnc_TransferredPointsStatistic() RETURNS TABLE(
     )
 SELECT wc.Peer1,
     wc.Peer2,
-   wc.PointsAmount
+    wc.PointsAmount
 FROM without_checks AS wc
 ORDER BY 1,
     2,
@@ -144,14 +145,14 @@ WITH tp_checkingpeer AS (
             tp2.pointsamount
     ),
     tp_checkedpeer AS (
-        SELECT tp2.checkedpeer AS peer2,
+        SELECT tp2.checkedpeer AS "Peer2",
             sum(tp2.pointsamount)::BIGINT AS sum2
         FROM transferredpoints AS tp2
             JOIN peers AS p2 ON p2.nickname = tp2.checkedpeer
         GROUP BY tp2.checkedpeer,
             tp2.pointsamount
         EXCEPT
-        SELECT tp.checkingpeer AS peer2,
+        SELECT tp.checkingpeer AS "Peer2",
             sum(tp.pointsamount)::BIGINT AS sum2
         FROM transferredpoints AS tp
             JOIN peers AS p ON p.nickname = tp.checkingpeer
@@ -160,12 +161,12 @@ WITH tp_checkingpeer AS (
     ),
     all_peers AS (
         SELECT COALESCE(tp1.peer1, p.nickname) AS checkingpeer,
-            COALESCE(tp2.peer2, p.nickname) AS checkedpeer,
+            COALESCE(tp2."Peer2", p.nickname) AS checkedpeer,
             COALESCE(tp1.sum1, 0) plus_point,
             COALESCE(tp2.sum2, 0) minus_point
         FROM peers AS p
             FULL JOIN tp_checkingpeer AS tp1 ON tp1.peer1 = p.nickname
-            FULL JOIN tp_checkedpeer AS tp2 ON tp2.peer2 = p.nickname
+            FULL JOIN tp_checkedpeer AS tp2 ON tp2."Peer2" = p.nickname
     )
 SELECT a.checkingpeer AS "Peer",
     (a.plus_point - a.minus_point)::BIGINT AS "PointsChange"
@@ -216,3 +217,22 @@ SELECT * FROM fnc_points_traffic_all();
 
 
 ----------- 05 -----------
+
+CREATE OR REPLACE FUNCTION fnc_point_changes() RETURNS TABLE(
+        "Peer" VARCHAR,
+        "PointsChange" BIGINT
+    ) LANGUAGE plpgsql AS 
+$POINT_CHANGES$ 
+BEGIN 
+RETURN QUERY
+    SELECT tp."Peer1" AS "Peer",
+        SUM( tp."PointsAmount")::BIGINT AS "PointsAmount"
+    FROM fnc_TransferredPointsStatistic() AS tp
+    GROUP BY tp."Peer1"
+    ORDER BY 2 DESC;
+END;
+$POINT_CHANGES$;
+
+-- test 05 
+SELECT * FROM fnc_point_changes();
+
