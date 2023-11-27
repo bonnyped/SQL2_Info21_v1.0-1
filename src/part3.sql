@@ -134,39 +134,36 @@ WITH tp_checkingpeer AS (
             sum(tp.pointsamount)::BIGINT AS sum1
         FROM transferredpoints AS tp
             JOIN peers AS p ON p.nickname = tp.checkingpeer
-        GROUP BY tp.checkingpeer,
-            tp.pointsamount
-        EXCEPT
+        GROUP BY tp.checkingpeer
+        EXCEPT ALL
         SELECT tp2.checkedpeer AS peer1,
             sum(tp2.pointsamount)::BIGINT AS sum1
         FROM transferredpoints AS tp2
             JOIN peers AS p2 ON p2.nickname = tp2.checkedpeer
-        GROUP BY tp2.checkedpeer,
-            tp2.pointsamount
+        GROUP BY tp2.checkedpeer  
     ),
     tp_checkedpeer AS (
         SELECT tp2.checkedpeer AS "Peer2",
             sum(tp2.pointsamount)::BIGINT AS sum2
         FROM transferredpoints AS tp2
             JOIN peers AS p2 ON p2.nickname = tp2.checkedpeer
-        GROUP BY tp2.checkedpeer,
-            tp2.pointsamount
-        EXCEPT
+        GROUP BY tp2.checkedpeer
+        EXCEPT ALL
         SELECT tp.checkingpeer AS "Peer2",
             sum(tp.pointsamount)::BIGINT AS sum2
         FROM transferredpoints AS tp
             JOIN peers AS p ON p.nickname = tp.checkingpeer
-        GROUP BY tp.checkingpeer,
-            tp.pointsamount
+        GROUP BY tp.checkingpeer
     ),
     all_peers AS (
         SELECT COALESCE(tp1.peer1, p.nickname) AS checkingpeer,
-            COALESCE(tp2."Peer2", p.nickname) AS checkedpeer,
-            COALESCE(tp1.sum1, 0) plus_point,
-            COALESCE(tp2.sum2, 0) minus_point
+            COALESCE((tp2."Peer2"), p.nickname) AS checkedpeer,
+            COALESCE(sum(tp1.sum1), 0) plus_point,
+            COALESCE(sum(tp2.sum2), 0) minus_point
         FROM peers AS p
             FULL JOIN tp_checkingpeer AS tp1 ON tp1.peer1 = p.nickname
             FULL JOIN tp_checkedpeer AS tp2 ON tp2."Peer2" = p.nickname
+            GROUP BY tp2."Peer2", tp1.peer1, p.nickname
     )
 SELECT a.checkingpeer AS "Peer",
     (a.plus_point - a.minus_point)::BIGINT AS "PointsChange"
@@ -236,3 +233,73 @@ $POINT_CHANGES$;
 -- test 05 
 SELECT * FROM fnc_point_changes();
 
+
+
+
+
+
+----------- 10 -----------
+CREATE OR REPLACE FUNCTION fnc_status_checks_procent() RETURNS TABLE(
+        "SuccessfulChecks" BIGINT,
+        "UnsuccessfulChecks" BIGINT
+    ) LANGUAGE plpgsql AS 
+$CHECKS_PROCENT$ 
+BEGIN 
+RETURN QUERY
+WITH success_checks AS (
+    SELECT count(v.state) AS "Success"
+    FROM peers AS p
+        INNER JOIN checks AS ch ON p.nickname = ch.peer
+        AND EXTRACT(
+            day
+            FROM p.birthday
+        ) = EXTRACT(
+            day
+            FROM ch."date"
+        )
+        AND EXTRACT(
+            month
+            FROM p.birthday
+        ) = EXTRACT(
+            month
+            FROM ch."date"
+        )
+        JOIN p2p ON p2p.check = ch.id
+        JOIN verter AS v ON v.check = ch.id
+    WHERE  v.state = 'success' AND  p2p.state =  'success'
+    GROUP BY v.state
+),
+fail_checks AS (
+    SELECT COALESCE(count(p2p.state),count(v.state)):: BIGINT AS "Fail"
+    FROM peers AS p
+        INNER JOIN checks AS ch ON p.nickname = ch.peer
+        AND EXTRACT(
+            day
+            FROM p.birthday
+        ) = EXTRACT(
+            day
+            FROM ch."date"
+        )
+        AND EXTRACT(
+            month
+            FROM p.birthday
+        ) = EXTRACT(
+            month
+            FROM ch."date"
+        )
+        LEFT JOIN p2p ON p2p.check = ch.id
+        LEFT JOIN verter AS v ON v.check = ch.id
+    WHERE p2p.state = 'fail' OR (p2p.state = 'success' AND v.state = 'fail')
+    GROUP BY p2p.state, v.state
+)
+SELECT (s."Success"::NUMERIC / COALESCE(s."Success"::NUMERIC + f."Fail", 1) * 100)::BIGINT AS "SuccessfulChecks" ,
+    (
+        f."Fail"::NUMERIC / COALESCE(s."Success"::NUMERIC + f."Fail", 1) * 100
+    )::BIGINT AS "UnsuccessfulChecks"
+FROM fail_checks AS f
+    CROSS JOIN success_checks AS s;
+    END;
+$CHECKS_PROCENT$;
+
+--test 10
+SELECT *  FROM fnc_status_checks_procent();

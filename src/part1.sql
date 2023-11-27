@@ -274,20 +274,22 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('frankray', 'CPP1_s21_matrix+', '2023-01-31'),
        ('pamelawalker', 'CPP1_s21_matrix+', '2023-01-31'),
        ('pamelawalker', 'CPP2_s21_containers', '2023-02-11'),
-       ('kennethgraham', 'CPP2_s21_containers', '2023-02-23');
+       ('kennethgraham', 'CPP2_s21_containers', '2023-02-23'),
+       ('laurenwood', 'CPP1_s21_matrix+', '2004-02-29'),
+       ('laurenwood', 'CPP1_s21_matrix+', '2004-02-29');
 
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
-VALUES (1, 'nancymartinez', DEFAULT, current_time),
+VALUES (1, 'nancymartinez', 'start', current_time),
        (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
-       (2, 'nancywilson', DEFAULT, current_time + '01:30:00'::time),
+       (2, 'nancywilson', 'start', current_time + '01:30:00'::time),
        (2, 'nancywilson', 'success', current_time + '02:00:00'::time),
-       (3, 'kennethgraham', DEFAULT, current_time + '11:30:00'::time),
+       (3, 'kennethgraham', 'start', current_time + '11:30:00'::time),
        (3, 'kennethgraham', 'success', current_time + '11:55:00'::time),
-       (4, 'laurenwood', DEFAULT, current_time + '07:10:00'::time),
+       (4, 'laurenwood', 'start', current_time + '07:10:00'::time),
        (4, 'laurenwood', 'success', current_time + '07:43:00'::time),
-       (5, 'nancywilson', DEFAULT, current_time + '03:33:33'::time),
+       (5, 'nancywilson', 'start', current_time + '03:33:33'::time),
        (5, 'nancywilson', 'success', current_time + '04:00:33'::time),
-       (6, 'nancymartinez', DEFAULT, current_time + '05:05:05'::time),
+       (6, 'nancymartinez', 'start', current_time + '05:05:05'::time),
        (6, 'nancymartinez', 'success', current_time + '05:55:05'::time),
        (7, 'pamelawalker', 'start', '22:45:13'::time),
        (7, 'pamelawalker', 'success', '23:20:43'::time),
@@ -296,7 +298,11 @@ VALUES (1, 'nancymartinez', DEFAULT, current_time),
        (9,'frankray', 'start', '09:30:24'::time),
        (9,'frankray', 'success', '10:15:01'::time),
        (10,'frankray', 'start', '16:17:41'::time),
-       (10,'frankray', 'success', '16:50:41'::time);;
+       (10,'frankray', 'success', '16:50:41'::time),
+       (11,'frankray', 'start', '13:58:21'::time),
+       (11,'frankray', 'fail', '14:32:56'::time),
+       (12, 'nancymartinez', 'start', '22:05:05'::time),
+       (12, 'nancymartinez', 'success', '22:55:05'::time);
 
 
 INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
@@ -323,8 +329,16 @@ VALUES (2, 'success', current_time + '02:00:50'::time),
        (5, 'success', current_time + '04:01:55'::time),
        (6, DEFAULT, current_time + '05:55:35'::time),
        (6, 'success', current_time + '05:56:05'::time),
+       (7, 'start', '23:20:48'::time),
+       (7, 'success', '23:20:59'::time),
+       (8, 'success', '13:29:15'::time),
+       (8, 'start', '13:29:45'::time),
+       (9, 'success', '10:15:23'::time),
+       (9, 'start', '10:15:56'::time),
        (10, 'start', '16:50:41'::time),
-       (10, 'success', '16:51:01'::time);
+       (10, 'success', '16:51:01'::time),
+       (12, 'start', '22:55:12'::time),
+       (12, 'success', '22:55:33'::time);
 
 
 INSERT INTO xp ("check", XP_amount) -- добавить  ограничение на макс хр
@@ -333,7 +347,11 @@ VALUES (2, 299),
        (4, 255),
        (5, 200),
        (6, 600),
-       (10, 350);;
+       (7, 300),
+       (8, 277),
+       (9, 345),
+       (10, 350),
+       (12, 289);
 
 
 
