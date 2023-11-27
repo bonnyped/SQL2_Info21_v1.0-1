@@ -84,7 +84,7 @@ $AMOUNT_OF_EXPERIENCE$
 BEGIN 
 RETURN QUERY
 SELECT c.peer AS "Peer",
-    c.task AS "Task",
+    split_part(c.task, '_',1)::VARCHAR AS "Task",
     xp.xp_amount AS "XP"
 FROM checks AS c
     JOIN p2p AS p ON p.check = c.id
