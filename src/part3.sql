@@ -247,7 +247,7 @@ $CHECKS_PROCENT$
 BEGIN 
 RETURN QUERY
 WITH success_checks AS (
-    SELECT count(v.state) AS "Success"
+    SELECT COALESCE (count(v.state), NULL)::BIGINT AS "Success"
     FROM peers AS p
         INNER JOIN checks AS ch ON p.nickname = ch.peer
         AND EXTRACT(
@@ -265,12 +265,11 @@ WITH success_checks AS (
             FROM ch."date"
         )
         JOIN p2p ON p2p.check = ch.id
-        JOIN verter AS v ON v.check = ch.id
+        LEFT JOIN verter AS v ON v.check = ch.id
     WHERE  v.state = 'success' AND  p2p.state =  'success'
-    GROUP BY v.state
 ),
 fail_checks AS (
-    SELECT COALESCE(count(p2p.state),count(v.state)):: BIGINT AS "Fail"
+    SELECT COALESCE(count(p2p.state),count(v.state),NULL):: BIGINT AS "Fail"
     FROM peers AS p
         INNER JOIN checks AS ch ON p.nickname = ch.peer
         AND EXTRACT(
@@ -287,14 +286,13 @@ fail_checks AS (
             month
             FROM ch."date"
         )
-        LEFT JOIN p2p ON p2p.check = ch.id
+        JOIN p2p ON p2p.check = ch.id
         LEFT JOIN verter AS v ON v.check = ch.id
     WHERE p2p.state = 'fail' OR (p2p.state = 'success' AND v.state = 'fail')
-    GROUP BY p2p.state, v.state
 )
-SELECT (s."Success"::NUMERIC / COALESCE(s."Success"::NUMERIC + f."Fail", 1) * 100)::BIGINT AS "SuccessfulChecks" ,
+SELECT ( GREATEST(s."Success",0.0)::NUMERIC / GREATEST((s."Success"::NUMERIC + f."Fail"), 1.0 ) * 100)::BIGINT AS "SuccessfulChecks" ,
     (
-        f."Fail"::NUMERIC / COALESCE(s."Success"::NUMERIC + f."Fail", 1) * 100
+        GREATEST(f."Fail", 0.0)::NUMERIC / GREATEST((s."Success"::NUMERIC + f."Fail"), 1.0) * 100
     )::BIGINT AS "UnsuccessfulChecks"
 FROM fail_checks AS f
     CROSS JOIN success_checks AS s;
