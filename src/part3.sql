@@ -6,6 +6,14 @@ DROP FUNCTION IF EXISTS  fnc_points_traffic_all;
 DROP FUNCTION IF EXISTS  fnc_points_traffic;
 DROP FUNCTION IF EXISTS fnc_point_changes;
 
+
+DROP FUNCTION IF EXISTS fnc_status_checks_procent;
+DROP PROCEDURE IF EXISTS proc_third_task_not_completed(
+   firsttask VARCHAR,
+   secondtask VARCHAR,
+   thirdtask VARCHAR,
+   IN _result_one refcursor
+);
 ----------- 01 -----------
 
 CREATE OR REPLACE FUNCTION fnc_TransferredPointsStatistic() RETURNS TABLE(
@@ -242,62 +250,108 @@ SELECT * FROM fnc_point_changes();
 CREATE OR REPLACE FUNCTION fnc_status_checks_procent() RETURNS TABLE(
         "SuccessfulChecks" BIGINT,
         "UnsuccessfulChecks" BIGINT
-    ) LANGUAGE plpgsql AS 
+    ) LANGUAGE plpgsql AS
 $CHECKS_PROCENT$ 
-BEGIN 
+BEGIN
 RETURN QUERY
 WITH success_checks AS (
-    SELECT COALESCE (count(v.state), NULL)::BIGINT AS "Success"
-    FROM peers AS p
-        INNER JOIN checks AS ch ON p.nickname = ch.peer
-        AND EXTRACT(
-            day
-            FROM p.birthday
-        ) = EXTRACT(
-            day
-            FROM ch."date"
-        )
-        AND EXTRACT(
-            month
-            FROM p.birthday
-        ) = EXTRACT(
-            month
-            FROM ch."date"
-        )
-        JOIN p2p ON p2p.check = ch.id
-        LEFT JOIN verter AS v ON v.check = ch.id
-    WHERE  v.state = 'success' AND  p2p.state =  'success'
-),
-fail_checks AS (
-    SELECT COALESCE(count(p2p.state),count(v.state),NULL):: BIGINT AS "Fail"
-    FROM peers AS p
-        INNER JOIN checks AS ch ON p.nickname = ch.peer
-        AND EXTRACT(
-            day
-            FROM p.birthday
-        ) = EXTRACT(
-            day
-            FROM ch."date"
-        )
-        AND EXTRACT(
-            month
-            FROM p.birthday
-        ) = EXTRACT(
-            month
-            FROM ch."date"
-        )
-        JOIN p2p ON p2p.check = ch.id
-        LEFT JOIN verter AS v ON v.check = ch.id
-    WHERE p2p.state = 'fail' OR (p2p.state = 'success' AND v.state = 'fail')
-)
-SELECT ( GREATEST(s."Success",0.0)::NUMERIC / GREATEST((s."Success"::NUMERIC + f."Fail"), 1.0 ) * 100)::BIGINT AS "SuccessfulChecks" ,
+        SELECT COALESCE (count(v.state), NULL)::BIGINT AS "Success"
+        FROM peers AS p
+            INNER JOIN checks AS ch ON p.nickname = ch.peer
+            AND EXTRACT(
+                day
+                FROM p.birthday
+            ) = EXTRACT(
+                day
+                FROM ch."date"
+            )
+            AND EXTRACT(
+                month
+                FROM p.birthday
+            ) = EXTRACT(
+                month
+                FROM ch."date"
+            )
+            JOIN p2p ON p2p.check = ch.id
+            LEFT JOIN verter AS v ON v.check = ch.id
+        WHERE v.state = 'success'
+            AND p2p.state = 'success'
+    ),
+    fail_checks AS (
+        SELECT COALESCE(count(p2p.state), count(v.state), NULL)::BIGINT AS "Fail"
+        FROM peers AS p
+            INNER JOIN checks AS ch ON p.nickname = ch.peer
+            AND EXTRACT(
+                day
+                FROM p.birthday
+            ) = EXTRACT(
+                day
+                FROM ch."date"
+            )
+            AND EXTRACT(
+                month
+                FROM p.birthday
+            ) = EXTRACT(
+                month
+                FROM ch."date"
+            )
+            JOIN p2p ON p2p.check = ch.id
+            LEFT JOIN verter AS v ON v.check = ch.id
+        WHERE p2p.state = 'fail'
+            OR (
+                p2p.state = 'success'
+                AND v.state = 'fail'
+            )
+    )
+SELECT (
+        GREATEST(s."Success", 0.0)::NUMERIC / GREATEST((s."Success"::NUMERIC + f."Fail"), 1.0) * 100
+    )::BIGINT AS "SuccessfulChecks",
     (
         GREATEST(f."Fail", 0.0)::NUMERIC / GREATEST((s."Success"::NUMERIC + f."Fail"), 1.0) * 100
     )::BIGINT AS "UnsuccessfulChecks"
 FROM fail_checks AS f
     CROSS JOIN success_checks AS s;
-    END;
+END;
 $CHECKS_PROCENT$;
-
 --test 10
 SELECT *  FROM fnc_status_checks_procent();
+
+
+----------- 11 -----------
+
+CREATE OR REPLACE PROCEDURE proc_third_task_not_completed(
+   firsttask VARCHAR,
+   secondtask VARCHAR,
+   thirdtask VARCHAR,
+   IN _result_one refcursor DEFAULT 'result'
+) 
+LANGUAGE plpgsql  AS  
+$$
+begin
+open _result_one for
+    SELECT DISTINCT ch.peer AS "Peer"
+    FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+    WHERE ch.task = firsttask --'CPP1_s21_matrix+'
+    INTERSECT
+    SELECT DISTINCT ch.peer
+    FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+    WHERE ch.task = secondtask --'CPP2_s21_containers'
+    EXCEPT
+    SELECT DISTINCT ch.peer
+    FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+    WHERE ch.task = thirdtask; --'CPP3_SmartCalc_v2.0';
+    
+end;
+$$;
+
+
+-- test 11
+BEGIN;
+call proc_third_task_not_completed(
+   'CPP1_s21_matrix+',
+   'CPP2_s21_containers',
+   'CPP3_SmartCalc_v2.0'
+);
+FETCH ALL FROM "result";
+END;
+
