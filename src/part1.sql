@@ -213,7 +213,7 @@ INSERT INTO Peers (Nickname, Birthday)
 VALUES ('kennethgraham', '1999-02-23'),
     ('nancywilson', '1978-06-08'),
     ('troybrown', '1964-11-03'),
-    ('laurenwood', '2004-02-29'),
+    ('laurenwood', '2004-02-28'),
     ('nancymartinez', '1995-08-06'),
     ('pamelawalker', '1992-12-13'),
     ('lorigarrett', '1970-09-30'),
@@ -226,15 +226,19 @@ VALUES ('kennethgraham', 'nancymartinez'),
     ('kennethgraham', 'laurenwood'),
     ('troybrown', 'nancywilson'),
     ('nancywilson', 'laurenwood'),
-    ('laurenwood', 'nancymartinez');
-    
+    ('laurenwood', 'nancymartinez'),
+    ('josepayne', 'lloydmartin');
 
 INSERT INTO Recommendations (id, Peer, RecommendedPeer)
 VALUES (1, 'laurenwood', 'nancymartinez'),
     (2, 'kennethgraham', 'laurenwood'),
     (3, 'laurenwood', 'nancywilson'),
     (4, 'nancywilson', 'laurenwood'),
-    (5, 'laurenwood', 'troybrown');
+    (5, 'laurenwood', 'troybrown'),
+    (6, 'kennethgraham', 'josepayne'),
+    (7, 'lloydmartin', 'josepayne'),
+    (8, 'lloydmartin', 'frankray'),
+    (9, 'nancymartinez', 'nancywilson');
 INSERT INTO TimeTracking (id, Peer, "Date", "Time", "State")
 VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (2, 'laurenwood', '2022-12-23', '14:02', 2),
@@ -275,8 +279,8 @@ VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
        ('pamelawalker', 'CPP1_s21_matrix+', '2023-01-31'),
        ('pamelawalker', 'CPP2_s21_containers', '2023-02-11'),
        ('kennethgraham', 'CPP2_s21_containers', '2023-02-23'),
-       ('laurenwood', 'CPP1_s21_matrix+', '2004-02-29'),
-       ('laurenwood', 'CPP1_s21_matrix+', '2004-02-29');
+       ('laurenwood', 'CPP1_s21_matrix+', '2023-02-28'),
+       ('laurenwood', 'CPP1_s21_matrix+', '2023-02-28');
 
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
 VALUES (1, 'nancymartinez', 'start', current_time),
