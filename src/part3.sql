@@ -6,6 +6,7 @@ DROP FUNCTION IF EXISTS  fnc_points_traffic_all;
 DROP FUNCTION IF EXISTS  fnc_points_traffic;
 DROP FUNCTION IF EXISTS fnc_point_changes;
 
+DROP FUNCTION IF EXISTS fnc_recommendation_peer;
 
 DROP FUNCTION IF EXISTS fnc_status_checks_procent;
 DROP PROCEDURE IF EXISTS proc_third_task_not_completed(
@@ -14,6 +15,8 @@ DROP PROCEDURE IF EXISTS proc_third_task_not_completed(
    thirdtask VARCHAR,
    IN _result_one refcursor
 );
+
+
 ----------- 01 -----------
 
 CREATE OR REPLACE FUNCTION fnc_TransferredPointsStatistic() RETURNS TABLE(
@@ -241,8 +244,60 @@ $POINT_CHANGES$;
 -- test 05 
 SELECT * FROM fnc_point_changes();
 
+----------- 06 -----------
+
+-- test 06
+
+----------- 07 -----------
+
+-- test 07
 
 
+----------- 08 -----------
+
+CREATE OR REPLACE FUNCTION fnc_recommendation_peer() RETURNS TABLE(
+        "Peer" VARCHAR,
+       "RecommendedPeer" VARCHAR
+    ) LANGUAGE plpgsql AS 
+$RECOMMENDATION$ 
+BEGIN 
+RETURN QUERY
+WITH list_recommend AS (
+    SELECT p.nickname,
+        f.peer2 AS friend,
+        r.recommendedpeer
+    FROM peers AS p
+        JOIN friends AS f ON p.nickname = f.peer1 
+        JOIN recommendations AS r ON r.peer = f.peer2
+    WHERE r.recommendedpeer != p.nickname
+    UNION ALL
+    SELECT p.nickname,
+        f.peer1 AS friend,
+        r.recommendedpeer
+    FROM peers AS p
+        JOIN friends AS f ON p.nickname = f.peer2 
+        JOIN recommendations AS r ON r.peer = f.peer1
+    WHERE r.recommendedpeer != p.nickname
+),
+all_recomendations AS (
+    SELECT DISTINCT ON (nickname) nickname,
+        recommendedpeer,
+        count(*) AS number_recomendation
+    FROM list_recommend
+    GROUP BY nickname,
+        recommendedpeer
+    ORDER BY 1,
+        3 DESC,
+        2 DESC
+)
+SELECT nickname AS "Peer",
+    recommendedpeer AS "RecommendedPeer" --,  number_recomendation
+FROM all_recomendations;
+END;
+$RECOMMENDATION$;
+
+-- test 08
+SELECT * FROM fnc_recommendation_peer();
 
 
 
@@ -355,3 +410,36 @@ call proc_third_task_not_completed(
 FETCH ALL FROM "result";
 END;
 
+
+
+-- CREATE OR REPLACE PROCEDURE proc_third_task_not_completed2(
+--    firsttask VARCHAR,
+--    secondtask VARCHAR,
+--    thirdtask VARCHAR
+-- ) 
+-- LANGUAGE plpgsql  AS  
+-- $$
+-- DECLARE res record;
+-- peersing VARCHAR(50);
+-- begin
+--     FOR res in SELECT ch.peer 
+--     FROM checks AS ch 
+--     JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+--     WHERE ch.task = firsttask --'CPP1_s21_matrix+'
+--     INTERSECT
+--     SELECT DISTINCT ch.peer
+--     FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+--     WHERE ch.task = secondtask --'CPP2_s21_containers'
+--     EXCEPT
+--     SELECT DISTINCT ch.peer
+--     FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
+--     WHERE ch.task = thirdtask LOOP --'CPP3_SmartCalc_v2.0';
+--     peersing = res.peer;
+--     RAISE NOTICE 'col1: %', quote_ident(res.peer);
+--     END LOOP;
+-- end;
+-- $$;
+
+-- call proc_third_task_not_completed2(   'CPP1_s21_matrix+',
+--    'CPP2_s21_containers',
+--    'CPP3_SmartCalc_v2.0');
