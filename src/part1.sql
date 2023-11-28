@@ -2,7 +2,7 @@
 
 
 -- DROP ALL
-DROP TABLE IF EXISTS Friends;
+DROP TABLE IF EXISTS Friends  CASCADE ;
 DROP TABLE IF EXISTS TransferredPoints;
 DROP TABLE IF EXISTS Recommendations;
 DROP TABLE IF EXISTS TimeTracking;
@@ -238,8 +238,8 @@ VALUES (1, 'laurenwood', 'nancymartinez'),
     (6, 'kennethgraham', 'josepayne'),
     (7, 'lloydmartin', 'josepayne'),
     (8, 'lloydmartin', 'frankray'),
-    (9, 'nancymartinez', 'nancywilson');
-    
+    (9, 'nancymartinez', 'nancywilson'),
+    (10, 'laurenwood', 'josepayne');
 INSERT INTO TimeTracking (id, Peer, "Date", "Time", "State")
 VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (2, 'laurenwood', '2022-12-23', '14:02', 2),
@@ -247,67 +247,151 @@ VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (4, 'laurenwood', '2022-12-23', '19:43', 2),
     (5, 'nancywilson', '2022-12-23', '22:04', 1),
     (6, 'lloydmartin', '2022-12-24', '09:43', 1),
-    (7, 'nancywilson', '2022-12-24', '13:04', 2);
+    (7, 'nancywilson', '2022-12-24', '13:04', 2),
+    (8, 'kennethgraham', '2023-01-03', '06:02', 1),
+    (9, 'laurenwood', '2023-01-03', '08:19', 1),
+    (10, 'nancymartinez', '2023-01-03', '08:43', 1),
+    (11, 'kennethgraham', '2023-01-03', '09:04', 2),
+    (12, 'lloydmartin', '2023-01-03', '09:06', 1),
+    (13, 'kennethgraham', '2023-01-03', '09:14', 1),
+    (14, 'troybrown', '2023-01-03', '10:19', 1),
+    (15, 'nancymartinez', '2023-01-03', '10:23', 2),
+    (16, 'kennethgraham', '2023-01-03', '11:04', 2),
+    (17, 'lloydmartin', '2023-01-03', '11:04:23', 2),
+    (18, 'laurenwood', '2023-01-03', '19:14', 2),
+    (19, 'troybrown', '2023-01-03', '23:59', 2),
+    (20, 'kennethgraham', '2023-04-13', '11:22', 1),
+    (21, 'laurenwood', '2023-04-13', '11:29', 1),
+    (22, 'nancymartinez', '2023-04-13', '11:43', 1),
+    (23, 'kennethgraham', '2023-04-13', '14:04', 2),
+    (24, 'lloydmartin', '2023-04-13', '14:09', 1),
+    (25, 'kennethgraham', '2023-04-13', '15:14', 1),
+    (26, 'troybrown', '2023-04-13', '18:19', 1),
+    (27, 'nancymartinez', '2023-04-13', '18:26', 2),
+    (28, 'kennethgraham', '2023-04-13', '20:04', 2),
+    (29, 'lloydmartin', '2023-04-13', '21:04:23', 2),
+    (30, 'laurenwood', '2023-04-13', '23:54', 2),
+    (31, 'troybrown', '2023-04-13', '23:59:59', 2);
 
 INSERT INTO tasks(title, parent_task, max_xp)
-VALUES ('CPP1_s21_matrix+', NULL, 300),
-       ('CPP2_s21_containers', 'CPP1_s21_matrix+', 350),
-       ('CPP3_SmartCalc_v2.0', 'CPP2_s21_containers+', 600),
-       ('CPP4_3DViewer_v2.0', 'CPP3_SmartCalc_v2.0', 750),
-       ('CPP5_3DViewer_v2.1', 'CPP4_3DViewer_v2.0', 600),
-       ('CPP6_3DViewer_v2.2', 'CPP5_3DViewer_v2.1', 800),
-       ('CPP7_MLP', 'CPP6_3DViewer_v2.2', 700),
-       ('CPP8_PhotoLab_v1.0', 'CPP7_MLP', 450),
-       ('CPP9_MonitoringSystem', 'CPP8_PhotoLab_v1.0', 1000),
-       ('CPPE', 'CPP9_MonitoringSystem', 400),
-       ('A1_MAZE', 'CPP3_SmartCalc_v2.0', 300),
-       ('A2_SimpleNavigator v1.0', 'A1_MAZE', 400),
-       ('A3_Parallels', 'A2_SimpleNavigator v1.0', 300),
-       ('A4_Crypto', 'A3_Parallels', 350),
-       ('A5_s21_memory', 'A4_Crypto', 400),
-       ('A6_Transactions', 'A4_Crypto', 700),
-       ('A7_DNA_Analyser', 'A6_Transactions', 800),
-       ('A8_Algorithmic_trading', 'A7_DNA_Analyser', 800);
+VALUES ('C6_s21_matrix','',200),
+        ('C7_SmartCalc_v1.0','C6_s21_matrix',500),
+        ('C8_3DViewer_v1.0','C7_SmartCalc_v1.0',750),
+        ('CPP1_s21_matrix+','C8_3DViewer_v1.0',300),
+        ('CPP2_s21_containers','CPP1_s21_matrix+',350),
+        ('CPP3_SmartCalc_v2.0','CPP2_s21_containers',600),
+        ('A1_MAZE','CPP3_SmartCalc_v2.0',300),
+        ('A2_SimpleNavigator v1.0','A1_MAZE',400),
+        ('A3_Parallels','A2_SimpleNavigator v1.0',300),
+        ('DO1_Linux','C6_s21_matrix',300),
+        ('DO2_Linux_Network','DO1_Linux',250),
+        ('DO3_LinuxMonitoring_v1.0','DO2_Linux_Network',350);
 
-INSERT INTO checks (peer, task, date)
-VALUES ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-01'),
-       ('kennethgraham', 'CPP1_s21_matrix+', '2023-01-04'),
-       ('nancywilson', 'CPP1_s21_matrix+', '2023-01-02'),
-       ('troybrown', 'CPP1_s21_matrix+', '2023-01-10'),
-       ('kennethgraham', 'CPP2_s21_containers', '2023-01-20'),
-       ('kennethgraham', 'CPP3_SmartCalc_v2.0', '2023-01-30'),
-       ('frankray', 'CPP1_s21_matrix+', '2023-01-31'),
-       ('pamelawalker', 'CPP1_s21_matrix+', '2023-01-31'),
-       ('pamelawalker', 'CPP2_s21_containers', '2023-02-11'),
-       ('kennethgraham', 'CPP2_s21_containers', '2023-02-23'),
-       ('laurenwood', 'CPP1_s21_matrix+', '2023-02-28'),
-       ('laurenwood', 'CPP1_s21_matrix+', '2023-02-28');
+INSERT INTO checks (id, peer, task, date)
+VALUES (1,'frankray','C6_s21_matrix','2022-11-01'),
+        (2,'frankray','C7_SmartCalc_v1.0','2022-11-20'),
+        (3,'frankray','C8_3DViewer_v1.0','2022-12-05'),
+        (4,'kennethgraham','C6_s21_matrix','2022-11-05'),
+        (5,'kennethgraham','C7_SmartCalc_v1.0','2022-11-18'),
+        (6,'kennethgraham','C8_3DViewer_v1.0','2022-12-05'),
+        (7,'laurenwood','C6_s21_matrix','2022-12-05'),
+        (8,'laurenwood','C7_SmartCalc_v1.0','2022-12-27'),
+        (9,'laurenwood','C8_3DViewer_v1.0','2023-01-01'),
+        (10,'laurenwood','C8_3DViewer_v1.0','2023-01-01'),
+        (11,'nancywilson','C6_s21_matrix','2022-11-20'),
+        (12,'nancywilson','C7_SmartCalc_v1.0','2022-12-01'),
+        (13,'nancywilson','C8_3DViewer_v1.0','2022-12-18'),
+        (14,'pamelawalker','C6_s21_matrix','2022-11-02'),
+        (15,'pamelawalker','C7_SmartCalc_v1.0','2022-11-25'),
+        (16,'pamelawalker','C8_3DViewer_v1.0','2022-12-10'),
+        (17,'troybrown','C6_s21_matrix','2022-10-30'),
+        (18,'troybrown','C7_SmartCalc_v1.0','2022-11-11'),
+        (19,'troybrown','C8_3DViewer_v1.0','2022-11-30'),
+        (20,'kennethgraham','CPP1_s21_matrix+','2023-01-01'),
+        (21,'kennethgraham','CPP1_s21_matrix+','2023-01-04'),
+        (22,'nancywilson','CPP1_s21_matrix+','2023-01-02'),
+        (23,'troybrown','CPP1_s21_matrix+','2023-01-10'),
+        (24,'kennethgraham','CPP2_s21_containers','2023-01-20'),
+        (25,'kennethgraham','CPP3_SmartCalc_v2.0','2023-01-30'),
+        (26,'frankray','CPP1_s21_matrix+','2023-01-31'),
+        (27,'pamelawalker','CPP1_s21_matrix+','2023-01-31'),
+        (28,'pamelawalker','CPP2_s21_containers','2023-02-11'),
+        (29,'kennethgraham','CPP2_s21_containers','2023-02-23'),
+        (30,'pamelawalker','CPP3_SmartCalc_v2.0','2023-02-28'),
+        (31,'frankray','CPP3_SmartCalc_v2.0','2023-02-28'),
+        (32,'laurenwood','CPP1_s21_matrix+','2023-02-28'),
+        (33,'laurenwood','CPP1_s21_matrix+','2023-02-28'),
+        (34,'nancywilson','CPP2_s21_containers','2023-02-28');
 
-INSERT INTO p2p ("check", checkingpeer, "state", "time")
-VALUES (1, 'nancymartinez', 'start', current_time),
-       (1, 'nancymartinez', 'fail', current_time + '00:30:00'::time),
-       (2, 'nancywilson', 'start', current_time + '01:30:00'::time),
-       (2, 'nancywilson', 'success', current_time + '02:00:00'::time),
-       (3, 'kennethgraham', 'start', current_time + '11:30:00'::time),
-       (3, 'kennethgraham', 'success', current_time + '11:55:00'::time),
-       (4, 'laurenwood', 'start', current_time + '07:10:00'::time),
-       (4, 'laurenwood', 'success', current_time + '07:43:00'::time),
-       (5, 'nancywilson', 'start', current_time + '03:33:33'::time),
-       (5, 'nancywilson', 'success', current_time + '04:00:33'::time),
-       (6, 'nancymartinez', 'start', current_time + '05:05:05'::time),
-       (6, 'nancymartinez', 'success', current_time + '05:55:05'::time),
-       (7, 'pamelawalker', 'start', '22:45:13'::time),
-       (7, 'pamelawalker', 'success', '23:20:43'::time),
-       (8,'frankray', 'start', '12:45:23'::time),
-       (8,'frankray', 'success', '13:29:10'::time),
-       (9,'frankray', 'start', '09:30:24'::time),
-       (9,'frankray', 'success', '10:15:01'::time),
-       (10,'frankray', 'start', '16:17:41'::time),
-       (10,'frankray', 'success', '16:50:41'::time),
-       (11,'frankray', 'start', '13:58:21'::time),
-       (11,'frankray', 'fail', '14:32:56'::time),
-       (12, 'nancymartinez', 'start', '22:05:05'::time),
-       (12, 'nancymartinez', 'success', '22:55:05'::time);
+INSERT INTO p2p (id, "check", checkingpeer, "state", "time")
+VALUES (1,1,'nancymartinez','start','10:05:00'),
+(2,1,'nancymartinez','success','10:45:00'),
+(3,2,'kennethgraham','start','11:55:43'),
+(4,2,'kennethgraham','success','12:23:33'),
+(5,3,'laurenwood','start','14:01:45'),
+(6,3,'laurenwood','success','14:32:04'),
+(7,4,'frankray','start','20:03:01'),
+(8,4,'frankray','success','21:10:01'),
+(9,5,'pamelawalker','start','23:00:00'),
+(10,5,'pamelawalker','success','23:25:34'),
+(11,6,'troybrown','start','21:15:00'),
+(12,6,'troybrown','success','21:47:23'),
+(13,7,'kennethgraham','start','13:30:00'),
+(14,7,'kennethgraham','success','13:47:23'),
+(15,8,'frankray','start','16:15:00'),
+(16,8,'frankray','success','16:53:53'),
+(17,9,'nancywilson','start','17:00:00'),
+(18,9,'nancywilson','success','17:05:01'),
+(19,10,'nancymartinez','start','21:30:00'),
+(20,10,'nancymartinez','success','22:14:51'),
+(21,11,'nancymartinez','start','16:00:00'),
+(22,11,'nancymartinez','success','16:43:18'),
+(23,12,'pamelawalker','start','19:00:00'),
+(24,12,'pamelawalker','success','19:44:43'),
+(25,13,'troybrown','start','14:15:00'),
+(26,13,'troybrown','success','14:47:12'),
+(27,14,'frankray','start','12:30:00'),
+(28,14,'frankray','success','13:01:18'),
+(29,15,'kennethgraham','start','9:00:00'),
+(30,15,'kennethgraham','success','14:30:33'),
+(31,16,'laurenwood','start','12:45:00'),
+(32,16,'laurenwood','success','13:23:54'),
+(33,17,'nancywilson','start','22:00:00'),
+(34,17,'nancywilson','success','22:43:22'),
+(35,18,'kennethgraham','start','0:00:15'),
+(36,18,'kennethgraham','success','1:07:18'),
+(37,19,'laurenwood','start','13:30:00'),
+(38,19,'laurenwood','success','13:59:49'),
+(39,20,'nancymartinez','start','19:15:14'),
+(40,20,'nancymartinez','fail','19:45:14'),
+(41,21,'nancywilson','start','20:45:14'),
+(42,21,'nancywilson','success','21:15:14'),
+(43,22,'kennethgraham','start','6:45:14'),
+(44,22,'kennethgraham','success','7:10:14'),
+(45,23,'laurenwood','start','2:25:14'),
+(46,23,'laurenwood','success','2:58:14'),
+(47,24,'nancywilson','start','22:48:47'),
+(48,24,'nancywilson','success','23:15:47'),
+(49,25,'nancymartinez','start','0:20:19'),
+(50,25,'nancymartinez','success','1:10:19'),
+(51,26,'pamelawalker','start','22:45:13'),
+(52,26,'pamelawalker','success','23:20:43'),
+(53,27,'frankray','start','12:45:23'),
+(54,27,'frankray','success','13:29:10'),
+(55,28,'frankray','start','9:30:24'),
+(56,28,'frankray','success','10:15:01'),
+(57,29,'frankray','start','16:17:41'),
+(58,29,'frankray','success','16:50:41'),
+(59,30,'kennethgraham','start','11:30:00'),
+(60,30,'kennethgraham','success','11:55:33'),
+(61,31,'troybrown','start','12:00:00'),
+(62,31,'troybrown','success','12:31:10'),
+(63,32,'frankray','start','13:58:21'),
+(64,32,'frankray','fail','14:32:56'),
+(65,33,'nancymartinez','start','22:05:05'),
+(66,33,'nancymartinez','success','22:55:05'),
+(67,34,'kennethgraham','start','22:15:00'),
+(68,34,'kennethgraham','success','22:45:00');
 
 
 INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
@@ -324,39 +408,105 @@ INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
 --     (4, 'laurenwood', 'troybrown', 1),
 --     (5, 'nancymartinez', 'kennethgraham', 1);
 
-INSERT INTO verter ("check", "state", "time")
-VALUES (2, 'success', current_time + '02:00:50'::time),
-       (3, DEFAULT, current_time + '11:55:11'::time),
-       (3, 'success', current_time + '11:55:30'::time),
-       (4, DEFAULT, current_time + '07:43:11'::time),
-       (4, 'success', current_time + '07:43:55'::time),
-       (5, DEFAULT, current_time + '04:01:00'::time),
-       (5, 'success', current_time + '04:01:55'::time),
-       (6, DEFAULT, current_time + '05:55:35'::time),
-       (6, 'success', current_time + '05:56:05'::time),
-       (7, 'start', '23:20:48'::time),
-       (7, 'success', '23:20:59'::time),
-       (8, 'success', '13:29:15'::time),
-       (8, 'start', '13:29:45'::time),
-       (9, 'success', '10:15:23'::time),
-       (9, 'start', '10:15:56'::time),
-       (10, 'start', '16:50:41'::time),
-       (10, 'success', '16:51:01'::time),
-       (12, 'start', '22:55:12'::time),
-       (12, 'success', '22:55:33'::time);
+INSERT INTO verter (id, "check", "state", "time")
+VALUES (1,1,'start','10:45:03'),
+        (2,1,'success','10:45:45'),
+        (3,2,'start','12:23:33'),
+        (4,2,'success','12:23:53'),
+        (5,3,'start','14:32:04'),
+        (6,3,'success','14:32:44'),
+        (7,4,'start','20:03:01'),
+        (8,4,'success','20:03:31'),
+        (9,5,'start','23:25:34'),
+        (10,5,'success','23:25:59'),
+        (11,6,'start','21:47:23'),
+        (12,6,'success','21:47:45'),
+        (13,7,'start','13:47:23'),
+        (14,7,'success','13:47:55'),
+        (15,8,'start','16:53:53'),
+        (16,8,'success','16:54:13'),
+        (17,9,'start','17:05:01'),
+        (18,9,'fail','17:05:11'),
+        (19,10,'start','22:14:51'),
+        (20,10,'success','22:15:21'),
+        (21,11,'start','16:43:18'),
+        (22,11,'success','16:43:51'),
+        (23,12,'start','19:44:43'),
+        (24,12,'success','19:45:21'),
+        (25,13,'start','14:47:12'),
+        (26,13,'success','14:47:39'),
+        (27,14,'start','13:01:18'),
+        (28,14,'success','13:01:33'),
+        (29,15,'start','14:30:33'),
+        (30,15,'success','14:31:01'),
+        (31,16,'start','13:23:54'),
+        (32,16,'success','13:24:33'),
+        (33,17,'start','22:43:22'),
+        (34,17,'success','22:43:51'),
+        (35,18,'start','1:07:18'),
+        (36,18,'success','1:07:29'),
+        (37,19,'start','13:59:49'),
+        (38,19,'success','14:00:24'),
+        (39,21,'start','21:15:15'),
+        (40,21,'success','21:16:04'),
+        (41,22,'start','7:10:25'),
+        (42,22,'success','7:10:44'),
+        (43,23,'start','2:58:25'),
+        (44,23,'success','2:59:09'),
+        (45,24,'start','23:16:14'),
+        (46,24,'success','23:17:09'),
+        (47,25,'start','1:10:49'),
+        (48,25,'success','1:11:19'),
+        (49,26,'start','23:20:48'),
+        (50,26,'success','23:20:59'),
+        (51,27,'success','13:29:15'),
+        (52,27,'start','13:29:45'),
+        (53,28,'success','10:15:23'),
+        (54,28,'start','10:15:56'),
+        (55,29,'start','16:50:41'),
+        (56,29,'success','16:51:01'),
+        (57,30,'start','11:55:33'),
+        (58,30,'success','11:55:57'),
+        (59,31,'start','12:31:11'),
+        (60,31,'success','12:31:55'),
+        (61,33,'start','22:55:12'),
+        (62,33,'success','22:55:33'),
+        (63,34,'start','22:45:00'),
+        (64,34,'success','22:45:31');
 
 
-INSERT INTO xp ("check", XP_amount) -- добавить  ограничение на макс хр
-VALUES (2, 299),
-       (3, 300),
-       (4, 255),
-       (5, 200),
-       (6, 600),
-       (7, 300),
-       (8, 277),
-       (9, 345),
-       (10, 350),
-       (12, 289);
+INSERT INTO xp (id, "check", XP_amount) 
+VALUES (1,1,189),
+        (2,2,360),
+        (3,3,733),
+        (4,4,200),
+        (5,5,455),
+        (6,6,599),
+        (7,7,199),
+        (8,8,433),
+        (9,10,750),
+        (10,11,200),
+        (11,12,450),
+        (12,13,743),
+        (13,14,200),
+        (14,15,500),
+        (15,16,750),
+        (16,17,200),
+        (17,18,399),
+        (18,19,750),
+        (19,21,299),
+        (20,22,300),
+        (21,23,255),
+        (22,24,200),
+        (23,25,600),
+        (24,26,300),
+        (25,27,277),
+        (26,28,345),
+        (27,29,350),
+        (28,30,580),
+        (29,31,600),
+        (30,33,289),
+        (31,34,330);
 
 
 
@@ -387,6 +537,37 @@ VALUES (2, 299),
 -- TRUNCATE TABLE Verter;
 -- TRUNCATE TABLE p2p;
 -- TRUNCATE TABLE XP;
+-- TRUNCATE TABLE Checks CASCADE
+-- TRUNCATE TABLE Tasks CASCADE
+--
+
+
+
+-- INSERT INTO Verter ("check", "state", "time")
+-- VALUES (2, DEFAULT, current_time + '02:00:11'::time),
+--     (2, DEFAULT, current_time + '02:00:11'::time);
+-- SELECT datname FROM pg_database WHERE datname = 'model_s21';
+
+-- SELECT pg_database_size(current_database());
+-- SELECT pg_database_size('model_s21');
+-- SELECT pg_size_pretty(pg_database_size(current_database()));
+
+-- SELECT table_name FROM information_schema.tables
+-- WHERE table_schema NOT IN ('information_schema','pg_catalog');
+
+-- CALL import_from_csv('tasks', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/tasks.csv', ';');
+-- CALL import_from_csv('checks', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/checks.csv', ';');
+-- CALL import_from_csv('p2p', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/p2p.csv', ';');
+-- CALL import_from_csv('verter', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/verter.csv', ',');
+-- CALL import_from_csv('xp', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/xp.csv', ',');
+
+-- tests export/import !!!!!!!
+
+
+-- CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+-- CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+-- TRUNCATE TABLE  Friends;
+-- CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
 --
 --
 
