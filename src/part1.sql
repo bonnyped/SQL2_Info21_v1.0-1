@@ -239,6 +239,7 @@ VALUES (1, 'laurenwood', 'nancymartinez'),
     (7, 'lloydmartin', 'josepayne'),
     (8, 'lloydmartin', 'frankray'),
     (9, 'nancymartinez', 'nancywilson');
+    
 INSERT INTO TimeTracking (id, Peer, "Date", "Time", "State")
 VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (2, 'laurenwood', '2022-12-23', '14:02', 2),
@@ -402,3 +403,67 @@ VALUES (2, 299),
 
 -- SELECT table_name FROM information_schema.tables
 -- WHERE table_schema NOT IN ('information_schema','pg_catalog');
+
+
+--- нужно будет раскомментить потом 
+
+-- DROP TABLE IF EXISTS xp;
+-- DROP TABLE IF EXISTS verter;
+-- DROP TABLE IF EXISTS p2p;
+-- DROP TABLE IF EXISTS checks;
+-- DROP TABLE IF EXISTS tasks;
+
+-- DROP SEQUENCE IF EXISTS id_for_checks CASCADE ;
+-- DROP SEQUENCE IF EXISTS id_for_p2p CASCADE;
+-- DROP SEQUENCE IF EXISTS id_for_verter CASCADE;
+-- DROP SEQUENCE IF EXISTS id_for_xp CASCADE;
+
+-- CREATE SEQUENCE id_for_p2p;
+-- CREATE SEQUENCE id_for_checks;
+-- CREATE SEQUENCE id_for_verter;
+-- CREATE SEQUENCE id_for_xp;
+
+-- CREATE TABLE IF NOT EXISTS Tasks (
+--     "title" varchar PRIMARY KEY,
+--     parent_task varchar,
+--     max_xp smallint DEFAULT 0
+-- );
+
+-- CREATE TABLE IF NOT EXISTS Checks (
+--     id bigint PRIMARY KEY DEFAULT nextval('id_for_checks'),
+--     peer varchar NOT NULL,
+--     task varchar NOT NULL,
+--     "date" date NOT NULL DEFAULT current_date,
+--     FOREIGN KEY (peer) references Peers(nickname),
+--     FOREIGN KEY (task) references tasks(title)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS p2p (
+--     id bigint PRIMARY KEY DEFAULT nextval('id_for_p2p'),
+--     "check" bigint NOT NULL,
+--     CheckingPeer varchar NOT NULL,
+--     "state" check_state DEFAULT 'start'::check_state,
+--     "time" time NOT NULL DEFAULT current_time,
+--     FOREIGN KEY ("check") references checks(id),
+--     FOREIGN KEY (CheckingPeer) references Peers(nickname)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS Verter (
+--   id bigint PRIMARY KEY DEFAULT nextval('id_for_verter'),
+--   "check" bigint NOT NULL,
+--   "state" check_state DEFAULT 'start'::check_state,
+--   "time" time DEFAULT current_time,
+--   FOREIGN KEY ("check") references checks(id)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS Xp (
+--     id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'),
+--     "check"   bigint NOT NULL check ( Verter_success("check") ),
+--     XP_amount smallint NOT NULL check ( xp_lq_max("check", XP_amount) ),
+--     FOREIGN KEY ("check") references checks(id));
+
+-- CALL import_from_csv('tasks', 'C:\Users\devik\Desktop\new\tasks.csv', ',');
+-- CALL import_from_csv('checks', 'C:\Users\devik\Desktop\new\checks.csv', ',');
+-- CALL import_from_csv('p2p', 'C:\Users\devik\Desktop\new\p2p.csv', ',');
+-- CALL import_from_csv('verter', 'C:\Users\devik\Desktop\new\verter.csv', ',');
+-- CALL import_from_csv('xp', 'C:\Users\devik\Desktop\new\xp.csv', ',');

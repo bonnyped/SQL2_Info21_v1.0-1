@@ -3,7 +3,9 @@ LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP$
 DECLARE
     id_for_lookup    BIGINT;
     state_for_lookup check_state;
+    must_have_task boolean;
 BEGIN
+    CALL must_have_project_done(peer_dep, task_dep);
     SELECT max(c.id)
     INTO id_for_lookup
     FROM checks c
@@ -18,8 +20,36 @@ BEGIN
         THEN
         RAISE EXCEPTION 'The inserted data is not consistent with the data posted earlier in the p2p verification table ';
     END IF;
+    DROP TABLE IF EXISTS state_for_lookup;
 END;
     $DEPENDENCY_LOOKUP$;
+
+CREATE OR REPLACE PROCEDURE must_have_project_done(peer_dep VARCHAR(255), task_dep VARCHAR(255))
+    LANGUAGE plpgsql AS
+$MUST_HAVE_PROJECT_DONE$
+DECLARE
+    state_of_must_have_project check_state;
+BEGIN
+    WITH needed_task AS (SELECT parent_task accept_task
+                         FROM tasks
+                         WHERE title = task_dep),
+         needed_id_of_checks AS (SELECT c.id
+                                 FROM checks c
+                                          JOIN needed_task nt ON nt.accept_task = c.task
+                                 WHERE c.peer = peer_dep
+                                 ORDER BY date DESC
+                                 LIMIT 1)
+    SELECT v.state
+    INTO state_of_must_have_project
+    FROM verter v
+             JOIN needed_id_of_checks nc ON nc.id = v."check"
+    ORDER BY v.time DESC
+    LIMIT 1;
+    IF state_of_must_have_project IS NOT NULL AND state_of_must_have_project != 'success'::check_state THEN
+        RAISE EXCEPTION 'Must have project not done';
+    END IF;
+END;
+$MUST_HAVE_PROJECT_DONE$;
 
 CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checking_peer_p2p  VARCHAR(255),
                                        task_checks  VARCHAR(255), state_p2p check_state, time_to_checks time)
