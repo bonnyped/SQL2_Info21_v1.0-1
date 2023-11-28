@@ -257,7 +257,7 @@ WITH agregate_tasks AS (SELECT count(task) as count_t,
                          FROM agregate_tasks at
                          GROUP BY 2)
 SELECT omv.day,
-       substring(at.task,'[A-Z]+') task
+       split_part(at.task, '_', 1)
 FROM only_max_values omv
          JOIN agregate_tasks at ON omv.max_number = at.count_t AND omv.day = at.date;
 
