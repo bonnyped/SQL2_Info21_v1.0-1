@@ -246,7 +246,20 @@ $POINT_CHANGES$;
 SELECT * FROM fnc_point_changes();
 
 ----------- 06 -----------
-
+WITH agregate_tasks AS (SELECT count(task) as count_t,
+                               date,
+                               task
+                        FROM checks c
+                        GROUP BY date, task
+                        ORDER BY date),
+     only_max_values AS (SELECT max(at.count_t) max_number,
+                                at.date         "day"
+                         FROM agregate_tasks at
+                         GROUP BY 2)
+SELECT omv.day,
+       substring(at.task,'[A-Z]+') task
+FROM only_max_values omv
+         JOIN agregate_tasks at ON omv.max_number = at.count_t AND omv.day = at.date;
 
 
 -- test 06
