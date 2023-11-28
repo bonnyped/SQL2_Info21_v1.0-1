@@ -15,7 +15,7 @@ DROP PROCEDURE IF EXISTS proc_third_task_not_completed(
    thirdtask VARCHAR,
    IN _result_one refcursor
 );
-DROP FUNCTION IF EXISTS fnc_find_good_days_for_checks;
+DROP PROCEDURE IF EXISTS fnc_find_good_days_for_checks;
 
 
 ----------- 01 -----------
@@ -479,14 +479,15 @@ $STATISTIC_CHECKS$;
 
 
 -- Head Function
-CREATE OR REPLACE FUNCTION fnc_find_good_days_for_checks(N BIGINT DEFAULT 3) RETURNS TABLE
+CREATE OR REPLACE PROCEDURE fnc_find_good_days_for_checks
     (
-    "GoodDaysForChecks" TEXT
+    N BIGINT DEFAULT 3,
+    IN _result_two refcursor DEFAULT 'result'
     ) 
 LANGUAGE plpgsql AS
 $GOOD_DAYS_FOR_CHECKS$
 BEGIN
-RETURN QUERY
+OPEN _result_two for
 WITH fail_checks AS (
         SELECT DISTINCT f1.date_check,
             f1.time_begin_p2p,
@@ -533,18 +534,44 @@ WHERE continuous_success >= N;
 END;
 $GOOD_DAYS_FOR_CHECKS$;
 
--- test ex13 DEFAULT value = 3
-SELECT * FROM fnc_find_good_days_for_checks();
-
+-- test ex13 DEFAULT value = 3 and 'result'
+BEGIN;
+call fnc_find_good_days_for_checks();
+FETCH ALL FROM "result";
+END;
+--
+BEGIN;
+call fnc_find_good_days_for_checks(1);
+FETCH ALL FROM "result";
+END;
 
 -- test function fnc_statistic_checks
 SELECT * FROM fnc_statistic_checks() ORDER BY 2,3;
 
 ----------- 14 -----------
+CREATE OR REPLACE FUNCTION fnc_peer_with_max_xp() RETURNS TABLE
+    (
+    "Peer" VARCHAR,
+    "XP" BIGINT
+    ) 
+LANGUAGE plpgsql AS
+$MAX_XP$
+BEGIN
+RETURN QUERY
+WITH info_peer_xp AS (
+SELECT DISTINCT ON (ch.task, ch.peer) ch.task, ch."date", ch.peer, x.xp_amount, p.time
+FROM checks AS ch INNER JOIN xp AS x ON ch.id = x.check JOIN p2p AS p ON p.check = ch.id AND p.state = 'success'
+ORDER BY 1, 3,2 DESC, 5 DESC,  2 DESC, 5 DESC)
+SELECT peer AS "Peer", sum(xp_amount) AS "XP"
+FROM  info_peer_xp
+GROUP BY peer
+ORDER BY 2 DESC, 1
+LIMIT 1;
+END;
+$MAX_XP$;
 
-
-
-
+-- test 14
+SELECT * FROM fnc_peer_with_max_xp();
 
 
 ----------- 15 -----------
