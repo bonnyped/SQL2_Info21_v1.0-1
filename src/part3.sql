@@ -15,6 +15,7 @@ DROP PROCEDURE IF EXISTS proc_third_task_not_completed(
    thirdtask VARCHAR,
    IN _result_one refcursor
 );
+DROP FUNCTION IF EXISTS fnc_find_good_days_for_checks;
 
 
 ----------- 01 -----------
@@ -246,9 +247,14 @@ SELECT * FROM fnc_point_changes();
 
 ----------- 06 -----------
 
+
+
 -- test 06
 
 ----------- 07 -----------
+
+
+
 
 -- test 07
 
@@ -298,6 +304,13 @@ $RECOMMENDATION$;
 
 -- test 08
 SELECT * FROM fnc_recommendation_peer();
+
+----------- 09 -----------
+
+
+
+
+
 
 
 
@@ -409,37 +422,146 @@ call proc_third_task_not_completed(
 );
 FETCH ALL FROM "result";
 END;
+----------- 12 -----------
 
 
 
--- CREATE OR REPLACE PROCEDURE proc_third_task_not_completed2(
---    firsttask VARCHAR,
---    secondtask VARCHAR,
---    thirdtask VARCHAR
--- ) 
--- LANGUAGE plpgsql  AS  
--- $$
--- DECLARE res record;
--- peersing VARCHAR(50);
--- begin
---     FOR res in SELECT ch.peer 
---     FROM checks AS ch 
---     JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
---     WHERE ch.task = firsttask --'CPP1_s21_matrix+'
---     INTERSECT
---     SELECT DISTINCT ch.peer
---     FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
---     WHERE ch.task = secondtask --'CPP2_s21_containers'
---     EXCEPT
---     SELECT DISTINCT ch.peer
---     FROM checks AS ch JOIN verter AS v ON v.check = ch.id AND v.state = 'success'
---     WHERE ch.task = thirdtask LOOP --'CPP3_SmartCalc_v2.0';
---     peersing = res.peer;
---     RAISE NOTICE 'col1: %', quote_ident(res.peer);
---     END LOOP;
--- end;
--- $$;
 
--- call proc_third_task_not_completed2(   'CPP1_s21_matrix+',
---    'CPP2_s21_containers',
---    'CPP3_SmartCalc_v2.0');
+
+
+
+
+
+
+----------- 13 -----------
+DROP FUNCTION IF EXISTS fnc_statistic_checks;
+CREATE OR REPLACE FUNCTION fnc_statistic_checks() RETURNS TABLE(
+        checks_id BIGINT,
+        date_check DATE,
+        time_begin_p2p TIME,
+        status_check check_state
+    ) LANGUAGE plpgsql AS
+$STATISTIC_CHECKS$ 
+BEGIN 
+RETURN QUERY
+SELECT DISTINCT ON (p.check) p.check AS checks_id,
+    ch."date" AS date_check,
+    (
+        SELECT p2p.time
+        FROM p2p
+        WHERE p2p.check = p.check
+            AND p2p.state = 'start'
+    ) AS time_begin_p2p,
+    COALESCE(
+        (
+            SELECT (
+                    CASE
+                        WHEN 80.0 <= (x.xp_amount::NUMERIC / t.max_xp * 100.0)::REAL THEN v.state
+                        ELSE 'fail'
+                    END
+                ) as "state"
+            FROM verter AS v
+                JOIN checks AS ch ON ch.id = p.check
+                JOIN tasks AS t ON ch.task = t.title
+                LEFT JOIN xp AS x ON x.check = ch.id
+            WHERE v.check = p.check
+                AND v.state != 'start'
+        ),
+        'fail'
+    ) AS status_check
+FROM p2p AS p
+    JOIN checks AS ch ON ch.id = p.check
+    JOIN tasks AS t ON ch.task = t.title
+    LEFT JOIN xp AS x ON x.check = ch.id
+WHERE p.state != 'start';
+END;
+$STATISTIC_CHECKS$;
+
+
+-- Head Function
+CREATE OR REPLACE FUNCTION fnc_find_good_days_for_checks(N BIGINT DEFAULT 3) RETURNS TABLE
+    (
+    "GoodDaysForChecks" TEXT
+    ) 
+LANGUAGE plpgsql AS
+$GOOD_DAYS_FOR_CHECKS$
+BEGIN
+RETURN QUERY
+WITH fail_checks AS (
+        SELECT DISTINCT f1.date_check,
+            f1.time_begin_p2p,
+            f1.status_check
+        FROM fnc_statistic_checks() AS f1
+        WHERE f1.status_check = 'fail'
+        ORDER BY 1,
+            2
+    ),
+    determinant_table AS (
+        SELECT f.date_check AS fd,
+            f.time_begin_p2p AS ft,
+            f.status_check AS fs,
+            a.date_check,
+            a.time_begin_p2p,
+            a.status_check
+        FROM fail_checks AS f
+            FULL JOIN fnc_statistic_checks() AS a ON a.date_check = f.date_check
+    ),
+    all_success_day AS (
+        SELECT dt1."date_check",
+            count(*) AS continuous_success
+        FROM determinant_table AS dt1
+        WHERE dt1.ft < dt1.time_begin_p2p
+        GROUP BY dt1."date_check"
+        UNION ALL
+        SELECT dt2."date_check",
+            count(*) AS continuous_success
+        FROM determinant_table AS dt2
+        WHERE dt2.ft > dt2.time_begin_p2p
+        GROUP BY dt2."date_check"
+        UNION ALL
+        SELECT dt3."date_check",
+            count(*) AS continuous_success
+        FROM determinant_table AS dt3
+        WHERE dt3.ft IS NULL
+        GROUP BY dt3."date_check"
+        ORDER BY 1,
+            2 DESC
+    )
+SELECT DISTINCT TO_CHAR (date_check, 'DD Month yyyy (DAY)') AS "GoodDaysForChecks"
+FROM all_success_day
+WHERE continuous_success >= N;
+END;
+$GOOD_DAYS_FOR_CHECKS$;
+
+-- test ex13 DEFAULT value = 3
+SELECT * FROM fnc_find_good_days_for_checks();
+
+
+-- test function fnc_statistic_checks
+SELECT * FROM fnc_statistic_checks() ORDER BY 2,3;
+
+----------- 14 -----------
+
+
+
+
+
+
+----------- 15 -----------
+
+
+
+
+
+
+----------- 16 -----------
+
+
+
+
+
+
+----------- 17 -----------
+
+
+
