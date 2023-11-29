@@ -319,13 +319,50 @@ $RECOMMENDATION$;
 SELECT * FROM fnc_recommendation_peer();
 
 ----------- 09 -----------
+-- DROP PROCEDURE proc_percentage_of_peers_blocks_started(blockA VARCHAR, blockB VARCHAR, result REFCURSOR);
 
+CREATE OR REPLACE PROCEDURE proc_percentage_of_peers_blocks_started(blockA VARCHAR(255), blockB VARCHAR(255), INOUT result REFCURSOR DEFAULT 'result_query')
+    LANGUAGE plpgsql AS $FIND_PERSENTAGE$
+DECLARE
+    number_of_peers BIGINT;
+BEGIN
+    SELECT count(*)
+    INTO number_of_peers
+    FROM peers;
+    open result for
+        WITH all_peers_started_blocks AS (SELECT peer,
+                                                 substring(task, '[A-Z]+')::varchar(255) started_block
+                                          FROM checks c
+                                                   JOIN p2p p ON c.id = p."check"
+                                          GROUP BY 2, 1
+                                          ORDER BY 1),
+             started_blockA AS (SELECT count(*) StartedBlock1
+                                FROM all_peers_started_blocks
+                                WHERE started_block = blockA),
+             started_blockB AS (SELECT count(*) StartedBlock2
+                                FROM all_peers_started_blocks
+                                WHERE started_block = blockB),
+             started_both_blocks
+                 AS (SELECT count(*) StartedBothBlocks
+                     FROM all_peers_started_blocks a1
+                              JOIN all_peers_started_blocks a2
+                                   ON a1.peer = a2.peer
+                     WHERE a1.started_block = blockA
+                       AND a2.started_block = blockB),
+             didnt_started_blocks AS (SELECT count(*) DidntStartAnyBlock
+                                      FROM all_peers_started_blocks
+                                      WHERE started_block NOT IN (blockA, blockB))
+        SELECT (SELECT (StartedBlock1 * 100::numeric / number_of_peers) StartedBlock1 FROM started_blockA),
+               (SELECT (StartedBlock2 * 100::numeric / number_of_peers) StartedBlock2 FROM started_blockB),
+               (SELECT (StartedBothBlocks * 100::numeric / number_of_peers) StartedBothBlocks FROM started_both_blocks),
+               (SELECT (DidntStartAnyBlock * 100::numeric / number_of_peers) DidntStartAnyBlock FROM didnt_started_blocks);
+END;
+$FIND_PERSENTAGE$;
 
-
-
-
-
-
+BEGIN;
+CALL proc_percentage_of_peers_blocks_started('CPP', 'DO');
+FETCH ALL FROM result_query;
+END;
 
 ----------- 10 -----------
 CREATE OR REPLACE FUNCTION fnc_status_checks_procent() RETURNS TABLE(
