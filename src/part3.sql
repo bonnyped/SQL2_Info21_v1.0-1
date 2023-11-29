@@ -665,11 +665,41 @@ SELECT * FROM fnc_peer_with_max_xp();
 
 
 ----------- 15 -----------
+-- DROP PROCEDURE IF EXISTS proc_determine_cames(specified_number_of_inputs BIGINT, specified_time_of_came TIME WITHOUT TIME ZONE, result REFCURSOR);
 
+CREATE OR REPLACE PROCEDURE proc_determine_cames(specified_number_of_inputs BIGINT,
+                                                 specified_time_of_came TIME WITHOUT TIME ZONE,
+                                                 result REFCURSOR DEFAULT 'result_query')
+    LANGUAGE plpgsql AS $DETERMINE_CAMES$
+    BEGIN
+        open result for
+WITH peers_come_before_time AS (SELECT count(*) number_of_cames,
+                                      peer
+                                FROM timetracking tr
+                                WHERE "State" = 1
+                                  AND "Time" < specified_time_of_came
+                                GROUP BY 2)
+SELECT peer nickname
+FROM peers_come_before_time
+WHERE number_of_cames >= specified_number_of_inputs;
+END;
+    $DETERMINE_CAMES$;
 
+-- test 15
+BEGIN;
+CALL proc_determine_cames(3, '20:00:00');
+FETCH ALL FROM "result_query";
+END;
 
+BEGIN;
+CALL proc_determine_cames(1, '23:00:00');
+FETCH ALL FROM "result_query";
+END;
 
-
+BEGIN;
+CALL proc_determine_cames(4, '14:00:00');
+FETCH ALL FROM "result_query";
+END;
 
 ----------- 16 -----------
 
