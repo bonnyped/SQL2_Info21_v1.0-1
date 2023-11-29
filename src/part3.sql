@@ -362,7 +362,9 @@ $FIND_PERSENTAGE$;
 BEGIN;
 CALL proc_percentage_of_peers_blocks_started('CPP', 'DO');
 FETCH ALL FROM result_query;
-END;
+END; 
+
+-- надо протащить одного пира в ветку А, и еще одного в ветку DO
 
 ----------- 10 -----------
 CREATE OR REPLACE FUNCTION fnc_status_checks_procent() RETURNS TABLE(
