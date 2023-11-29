@@ -703,10 +703,48 @@ END;
 
 ----------- 16 -----------
 
+-- DROP PROCEDURE IF EXISTS proc_determine_lefts(specified_days_before date, specified_number_of_lefts BIGINT, result_ REFCURSOR)
 
+CREATE OR REPLACE PROCEDURE proc_determine_lefts(specified_days_before SMALLINT, specified_number_of_lefts BIGINT,
+                                                 result_ REFCURSOR DEFAULT 'result_query')
+    LANGUAGE plpgsql AS
+$DETERMINE_LEFTS$
+BEGIN
+    open result_ for
+        WITH list_of_lefts AS (
+            SELECT count(*) number_of_lefts,
+                   peer
+            FROM timetracking tr
+            WHERE "State" = 2
+              AND tr."Date" BETWEEN ((SELECT "Date"
+                                              FROM timetracking
+                                              ORDER BY "Date" DESC
+                                              LIMIT 1) - specified_days_before )AND (SELECT "Date"
+                                                                 FROM timetracking
+                                                                 ORDER BY "Date" DESC
+                                                                 LIMIT 1)
+            GROUP BY tr.peer)
+            SELECT lol.peer nickname
+            FROM list_of_lefts lol
+            WHERE lol.number_of_lefts >= specified_number_of_lefts;
+END;
+$DETERMINE_LEFTS$;
 
+-- test 16
+BEGIN;
+CALL proc_determine_lefts('1', '3');
+FETCH ALL FROM "result_query";
+END;
 
+BEGIN;
+CALL proc_determine_lefts('1', '2');
+FETCH ALL FROM "result_query";
+END;
 
+BEGIN;
+CALL proc_determine_lefts('3', '2');
+FETCH ALL FROM "result_query";
+END;
 
 ----------- 17 -----------
 
