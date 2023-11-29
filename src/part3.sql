@@ -748,5 +748,43 @@ END;
 
 ----------- 17 -----------
 
-
-
+WITH months_number AS (
+    SELECT generate_series.generate_series number_of_month
+    FROM generate_series('01.01.01'::date, '01.12.01'::date, interval '1 month')),
+     months_name AS (
+         SELECT to_char(number_of_month, 'Month') AS mon_name,
+                number_of_month
+         FROM months_number mn),
+     peers_and_months_of_birth AS (SELECT nickname,
+                                          to_char(birthday, 'Month') "month_of_birth"
+                                   FROM peers),
+     month_of_coming AS (SELECT nickname,
+                                pmb.month_of_birth,
+                                tr."Date" date_of_come,
+                                tr."Time"
+                         FROM peers_and_months_of_birth pmb
+                                  LEFT JOIN timetracking tr ON tr.peer = pmb.nickname
+                         WHERE tr.id IS NOT NULL
+                           AND tr."State" = 1),
+     total_entries AS (SELECT *,
+                              (SELECT count(mc.nickname)
+                               FROM month_of_coming mc
+                               WHERE mn2.mon_name = mc.month_of_birth
+                                 AND mn2.mon_name = to_char(mc.date_of_come, 'Month')) total_number_of_entries
+                       FROM months_name mn2),
+     early_entries AS (SELECT *,
+                              (SELECT count(mc.nickname)
+                               FROM month_of_coming mc
+                               WHERE mn2.mon_name = mc.month_of_birth
+                                 AND mn2.mon_name = to_char(mc.date_of_come, 'Month')
+                                 AND mc."Time" < '12:00:00') number_of_early_entries
+                       FROM months_name mn2)
+SELECT te.mon_name "Month",
+       CASE te.total_number_of_entries
+           WHEN 0 THEN 0
+           ELSE ee.number_of_early_entries / te.total_number_of_entries * 100::real
+           END "EarlyEntries"
+FROM total_entries te,
+     early_entries ee
+WHERE te.mon_name = ee.mon_name
+ORDER BY te.number_of_month;
