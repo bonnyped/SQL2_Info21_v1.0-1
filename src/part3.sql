@@ -303,9 +303,9 @@ ORDER BY 2 DESC;
 END;
     $FIND_PEERS_ENDED_BLOCK$;
 
--- test 07
+-- test 07 НУЖНО ДОБАВИТЬ ПИРА, КОТОРЫЙ ЗАКОНЧИЛ ВЕТКУ А и ЕЩЕ ОДНОГО ПИРА ИЛИ ЭТОГО ЖЕ, КОТОРЫЙ ЗАКОНЧИЛ ВЕТКУ Д0
 BEGIN;
-CALL proc_peers_ended_this_block('A');
+CALL proc_peers_ended_this_block('С');
 FETCH ALL FROM result_query;
 close result_query;
 END;
