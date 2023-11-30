@@ -1,12 +1,29 @@
+-------------------------------------------
+----------- CREATE DATABASE ---------------
+-------------------------------------------
+
+-- CREATE DATABASE part4_s21;
+
+-------------------------------------------
+---------------- DROP ALL -----------------
+-------------------------------------------
+
 DROP TRIGGER IF EXISTS trg_tables_a_insert ON TableName_a;
 DROP TRIGGER IF EXISTS trg_tables_b_insert ON TableName_b;
+DROP FUNCTION IF EXISTS fnc_trg_tables_a_insert;
+DROP FUNCTION IF EXISTS fnc_trg_tables_b_insert;
 DROP TABLE IF EXISTS TableName_a;
 DROP TABLE IF EXISTS TableName_b;
 DROP TABLE IF EXISTS TableName_c;
 DROP PROCEDURE IF EXISTS proc_drop_tables;
 DROP PROCEDURE IF EXISTS proc_list_scalar_func;
-DROP PROCEDURE IF EXISTS prc_get_scalar_functions;
+DROP PROCEDURE IF EXISTS proc_list_scalar_func2;
 DROP PROCEDURE IF EXISTS proc_drop_triggers;
+DROP PROCEDURE IF EXISTS proc_print_name_objects;
+DROP FUNCTION IF EXISTS fnc_test_name;
+DROP FUNCTION IF EXISTS uppercase;
+DROP FUNCTION IF EXISTS add_numbers;
+
 -------------------------------------------
 ------- CREATE TABLES TableName_* ---------
 -------------------------------------------
@@ -29,6 +46,7 @@ CREATE TABLE IF NOT EXISTS TableName_a (
     "time_end" time NOT NULL DEFAULT current_time,
     FOREIGN KEY (number_test) REFERENCES TableName_c(id)
 );
+
 -------------------------------------------
 -------- INSERT TABLES TableName_* --------
 -------------------------------------------
@@ -82,6 +100,37 @@ CREATE TRIGGER trg_tables_a_insert
 AFTER INSERT ON TableName_a
     FOR EACH ROW EXECUTE FUNCTION fnc_trg_tables_a_insert();
 
+
+-------------------------------------------
+---------- CREATE scalar functions ----------------
+-------------------------------------------
+
+CREATE OR REPLACE FUNCTION  fnc_test_name(x BIGINT)
+RETURNS VARCHAR AS 
+$TransferredPoints$
+DECLARE
+    y VARCHAR default 0;
+BEGIN 
+    y := (SELECT test_name FROM tablename_c WHERE id = x);
+    RETURN y;
+END;
+$TransferredPoints$
+LANGUAGE plpgsql;
+
+-- select fnc_test_name(5);
+--
+CREATE OR REPLACE FUNCTION add_numbers(num1 INTEGER, num2 INTEGER) RETURNS INTEGER AS $$
+BEGIN
+    RETURN num1 + num2;
+END;
+$$ LANGUAGE plpgsql; 
+--
+CREATE OR REPLACE  FUNCTION uppercase(text_value TEXT) RETURNS TEXT AS $$
+BEGIN
+    RETURN UPPER(text_value);
+END;
+$$ LANGUAGE plpgsql;
+
 -------------------------------------------
 ------------------ 01 ---------------------
 -------------------------------------------
@@ -109,7 +158,7 @@ $DROP_TABLE_NAME$;
 
 -------------- test ex01 ------------------
 
--- call proc_drop_tables();
+-- CALL proc_drop_tables();
 
 -------------------------------------------
 ------------------ 02 ---------------------
@@ -148,22 +197,25 @@ BEGIN
 END;
 $LIST_SCALAR$;
 
+--***************************************--
 -------------- test ex02 ------------------
 
-BEGIN;
-call proc_list_scalar_func();
-FETCH ALL FROM "result";
-END;
+-- BEGIN;
+-- CALL proc_list_scalar_func();
+-- FETCH ALL FROM "result";
+-- END;
 
 -- BEGIN;
--- call proc_list_scalar_func('s');
+-- CALL proc_list_scalar_func('s');
 -- FETCH ALL FROM "s";
 -- END;
 
 -- BEGIN;
--- call proc_list_scalar_func('rcursor');
+-- CALL proc_list_scalar_func('rcursor');
 -- FETCH ALL FROM "rcursor";
 -- END;
+
+--***************************************--
 
 CREATE OR REPLACE PROCEDURE proc_list_scalar_func2( OUT list_out TEXT , OUT number_function INTEGER )
 LANGUAGE plpgsql AS
@@ -196,7 +248,8 @@ BEGIN
 END;
 $LIST_SCALAR2$;
 
--- test ex02
+--***************************************--
+-------------- test ex02 ------------------
 
 -- DO
 -- $$
@@ -205,13 +258,15 @@ $LIST_SCALAR2$;
 --         function_list TEXT;
 --     BEGIN
 --         CALL proc_list_scalar_func2(function_list, num_functions);
---         RAISE INFO 'Found % scalar functions: %', num_functions, function_list;
+--         RAISE INFO 'Discovered % ''scalar functions'': %', num_functions, function_list;
 --     END;
 -- $$;
+--***************************************--
 
 -------------------------------------------
 ------------------ 03 ---------------------
 -------------------------------------------
+
 DROP PROCEDURE IF EXISTS proc_drop_triggers;
 CREATE OR REPLACE PROCEDURE proc_drop_triggers(IN _result_one refcursor DEFAULT 'result')
 LANGUAGE plpgsql AS
@@ -235,10 +290,11 @@ BEGIN
 END;
 $DROP_TRIGGER$;
 
+--***************************************--
 -------------- test ex03 ------------------
 
 -- BEGIN;
--- call proc_drop_triggers('rcursor');
+-- CALL proc_drop_triggers('rcursor');
 -- FETCH ALL FROM "rcursor";
 -- END;
 
@@ -247,51 +303,43 @@ $DROP_TRIGGER$;
 -- SELECT event_object_table, trigger_name
 -- FROM  information_schema.triggers
 
+--***************************************--
+
 -------------------------------------------
 ------------------ 04 ---------------------
 -------------------------------------------
 
 
-
- SELECT DISTINCT r.routine_name, r.routine_type 
+CREATE OR REPLACE PROCEDURE proc_print_name_objects(IN str TEXT, IN _result_one refcursor DEFAULT '_print')
+LANGUAGE plpgsql AS
+$PRINT_OBJECTS$
+BEGIN
+OPEN _result_one for
+SELECT DISTINCT r.routine_name AS "NameObject", r.routine_type AS "TypeObject"
 FROM information_schema.routines AS r
-WHERE r.specific_schema = 'public'
-AND r.routine_definition ~* 'peer'; -- ???
-
-
-
-
-
-
--------------------------------------------
----------- CREATE Scalare F ----------------
--------------------------------------------
-
-DROP FUNCTION IF EXISTS fnc_test_name;
-CREATE OR REPLACE FUNCTION  fnc_test_name(x BIGINT)
-RETURNS VARCHAR AS 
-$TransferredPoints$
-DECLARE
-    y VARCHAR default 0;
-BEGIN 
-    y := (SELECT test_name FROM tablename_c WHERE id = x);
-    RETURN y;
+WHERE r.specific_schema = "current_schema"()
+AND  r.routine_definition LIKE ( '%' || str || '%'); 
 END;
-$TransferredPoints$
-LANGUAGE plpgsql;
-
-select fnc_test_name(5);
-
-CREATE FUNCTION add_numbers(num1 INTEGER, num2 INTEGER) RETURNS INTEGER AS $$
-BEGIN
-    RETURN num1 + num2;
-END;
-$$ LANGUAGE plpgsql; 
-
-CREATE FUNCTION uppercase(text_value TEXT) RETURNS TEXT AS $$
-BEGIN
-    RETURN UPPER(text_value);
-END;
-$$ LANGUAGE plpgsql;
+$PRINT_OBJECTS$;
 
 
+--***************************************--
+-------------- test ex03 ------------------
+
+-- BEGIN;
+-- CALL proc_print_name_objects('peer');
+-- FETCH ALL FROM "_print";
+-- END;
+
+-- BEGIN;
+-- CALL proc_print_name_objects('name_f', 'r');
+-- FETCH ALL FROM "r";
+-- END;
+
+-- BEGIN;
+-- CALL proc_print_name_objects('num1 + num2', 'rcursor');
+-- FETCH ALL FROM "rcursor";
+-- END;
+
+--***************************************--
+--***************************************--
