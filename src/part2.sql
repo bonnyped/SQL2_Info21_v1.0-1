@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE dependency_lookup(peer_dep VARCHAR(255), task_dep VARCHAR(255), state_dep check_state)
+CREATE OR REPLACE PROCEDURE proc_dependency_lookup(peer_dep VARCHAR(255), task_dep VARCHAR(255), state_dep check_state)
 LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP$
 DECLARE
     id_for_lookup    BIGINT;
@@ -24,7 +24,7 @@ BEGIN
 END;
     $DEPENDENCY_LOOKUP$;
 
-CREATE OR REPLACE PROCEDURE must_have_project_done(peer_dep VARCHAR(255), task_dep VARCHAR(255))
+CREATE OR REPLACE PROCEDURE proc_must_have_project_done(peer_dep VARCHAR(255), task_dep VARCHAR(255))
     LANGUAGE plpgsql AS
 $MUST_HAVE_PROJECT_DONE$
 DECLARE
@@ -51,22 +51,22 @@ BEGIN
 END;
 $MUST_HAVE_PROJECT_DONE$;
 
-CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checking_peer_p2p  VARCHAR(255),
+CREATE OR REPLACE PROCEDURE proc_adding_p2p(checked_peer_checks  VARCHAR(255), checking_peer_p2p  VARCHAR(255),
                                        task_checks  VARCHAR(255), state_p2p check_state, time_to_checks time)
     LANGUAGE plpgsql AS $ADDING_P2P$
     DECLARE
         needed_id BIGINT DEFAULT (SELECT max(c2.id)
                        FROM p2p p
                                 JOIN checks c2 ON p."check" = c2.id AND c2.peer = checked_peer_checks AND
-                                                  c2.task = task_checks AND p.checking_peer = checking_peer_p2p);
+                                                  c2.task = task_checks AND p.checkingpeer = checking_peer_p2p);
     BEGIN
         CALL dependency_lookup(checked_peer_checks, task_checks, state_p2p);
         IF state_p2p = 'start' THEN
            INSERT INTO checks (peer, task, date)
            VALUES (checked_peer_checks, task_checks, current_date::date);
-           INSERT INTO p2p ("check", checking_peer, state, time)
+           INSERT INTO p2p ("check", checkingpeer, state, time)
            VALUES ((SELECT max(id) FROM checks c), checking_peer_p2p, state_p2p, time_to_checks);
-        ELSE INSERT INTO p2p ("check", checking_peer, state, time)
+        ELSE INSERT INTO p2p ("check", checkingpeer, state, time)
              VALUES (needed_id, checking_peer_p2p, state_p2p, time_to_checks);
         END IF;
     END;
@@ -74,7 +74,7 @@ CREATE OR REPLACE PROCEDURE adding_p2p(checked_peer_checks  VARCHAR(255), checki
 
 -- CALL adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
 
-CREATE OR REPLACE PROCEDURE dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
+CREATE OR REPLACE PROCEDURE proc_dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
 LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
     DECLARE
         state_for_lookup check_state;
@@ -105,7 +105,7 @@ LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
         END;
     $DEPENDENCY_LOOKUP_VERTER$;
 
-CREATE OR REPLACE PROCEDURE adding_verter(peer_from_checks VARCHAR(255), task_from_checks VARCHAR(255), "state_to_verter" check_state, "time_to_verter" time)
+CREATE OR REPLACE PROCEDURE proc_adding_verter(peer_from_checks VARCHAR(255), task_from_checks VARCHAR(255), "state_to_verter" check_state, "time_to_verter" time)
 LANGUAGE plpgsql AS $ADDING_VERTER$
     DECLARE
         id_from_checks BIGINT;
