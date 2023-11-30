@@ -529,7 +529,7 @@ VALUES (1,1,189),
 -- TRUNCATE TABLE Friends;
 -- TRUNCATE TABLE TransferredPoints;
 -- TRUNCATE TABLE Recommendations;
-TRUNCATE TABLE TimeTracking;
+-- TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE Verter;
 -- TRUNCATE TABLE p2p;
 -- TRUNCATE TABLE XP;

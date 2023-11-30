@@ -1,3 +1,13 @@
+DROP PROCEDURE IF EXISTS proc_dependency_lookup(peer_dep VARCHAR, task_dep VARCHAR, state_dep check_state);
+DROP PROCEDURE IF EXISTS proc_must_have_project_done(peer_dep VARCHAR, task_dep VARCHAR);
+DROP PROCEDURE IF EXISTS proc_must_have_project_done(peer_dep VARCHAR, task_dep VARCHAR);
+DROP PROCEDURE IF EXISTS proc_dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state);
+DROP PROCEDURE IF EXISTS proc_adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
+DROP PROCEDURE IF EXISTS proc_adding_p2p(checked_peer_checks VARCHAR, checking_peer_p2p VARCHAR, task_checks VARCHAR, state_p2p check_state, time_to_checks time);
+
+DROP TRIGGER IF EXISTS trg_person_audit ON p2p CASCADE;
+DROP FUNCTION IF EXISTS fnc_trg_TransferredPoints();
+
 CREATE OR REPLACE PROCEDURE proc_dependency_lookup(peer_dep VARCHAR(255), task_dep VARCHAR(255), state_dep check_state)
 LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP$
 DECLARE
@@ -5,7 +15,7 @@ DECLARE
     state_for_lookup check_state;
     must_have_task boolean;
 BEGIN
-    CALL must_have_project_done(peer_dep, task_dep);
+    CALL proc_must_have_project_done(peer_dep, task_dep);
     SELECT max(c.id)
     INTO id_for_lookup
     FROM checks c
@@ -60,7 +70,7 @@ CREATE OR REPLACE PROCEDURE proc_adding_p2p(checked_peer_checks  VARCHAR(255), c
                                 JOIN checks c2 ON p."check" = c2.id AND c2.peer = checked_peer_checks AND
                                                   c2.task = task_checks AND p.checkingpeer = checking_peer_p2p);
     BEGIN
-        CALL dependency_lookup(checked_peer_checks, task_checks, state_p2p);
+        CALL proc_dependency_lookup(checked_peer_checks, task_checks, state_p2p);
         IF state_p2p = 'start' THEN
            INSERT INTO checks (peer, task, date)
            VALUES (checked_peer_checks, task_checks, current_date::date);
@@ -87,7 +97,7 @@ LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
         ORDER BY "time" DESC
         LIMIT 1;
         IF id_to_check IS NULL THEN
-            RAISE EXCEPTION '1 - There is no check in CHECKS and P2P TABLES with this parametrs'; 
+            RAISE EXCEPTION '1 - There is no check in CHECKS and P2P TABLES with this parametrs';
         ELSIF ((state_dep = start_eq AND state_for_lookup = start_eq) OR (state_dep != start_eq
             AND state_for_lookup != start_eq)) THEN
             RAISE EXCEPTION '2 - The inserting data is already inserted in VERTER TABLE';
@@ -116,35 +126,35 @@ LANGUAGE plpgsql AS $ADDING_VERTER$
         JOIN p2p p on c.id = p."check" AND c.peer = peer_from_checks AND c.task = task_from_checks
         ORDER BY c.date DESC, p.time DESC
         LIMIT 1;
-        CALL dependency_lookup_for_verter(id_from_checks, "state_to_verter");
+        CALL proc_dependency_lookup_for_verter(id_from_checks, "state_to_verter");
         INSERT INTO verter ("check", "state", "time")
         VALUES (id_from_checks, state_to_verter, "time_to_verter");
     END;
     $ADDING_VERTER$;
 
 -- CALL adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
--- 
+--
 -- DELETE FROM verter where id = 28;
--- 
+--
 -- DROP PROCEDURE adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
 
 CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
-RETURNS TRIGGER AS 
-$TransferredPoints$ 
+RETURNS TRIGGER AS
+$TransferredPoints$
 DECLARE
 TO_BE BIGINT := (select t.id::BIGINT
-            From p2p As p 
-            JOIN checks AS c ON c.id = p.check 
+            From p2p As p
+            JOIN checks AS c ON c.id = p.check
             join transferredpoints AS t ON c.peer = t.checkedpeer AND p.checkingpeer = t.checkingpeer
             WHERE p.state = 'start' AND p.check = NEW."check");
-    BEGIN 
+    BEGIN
         IF (TG_OP = 'INSERT' AND NEW."state" = 'start') THEN
             IF ( TO_BE != 0 ) THEN
                 UPDATE TransferredPoints SET pointsamount = pointsamount + 1 WHERE id =  TO_BE;
-            ELSE 
+            ELSE
                 INSERT INTO TransferredPoints (CheckingPeer,CheckedPeer, PointsAmount)
                 SELECT p2p.CheckingPeer, Checks.Peer, 1
-                FROM p2p JOIN checks ON p2p.Check = Checks.Id 
+                FROM p2p JOIN checks ON p2p.Check = Checks.Id
                 WHERE p2p."state" = 'start' AND p2p.check = NEW."check";
             END IF;
         END IF;
@@ -156,5 +166,3 @@ LANGUAGE plpgsql;
 CREATE TRIGGER trg_person_audit
 AFTER INSERT ON p2p
     FOR EACH ROW EXECUTE FUNCTION fnc_trg_TransferredPoints();
-	
-
