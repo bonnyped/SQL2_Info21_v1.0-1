@@ -516,7 +516,20 @@ END;
 
 
 
-
+WITH RECURSIVE task_parents ("taskProject", "numberPerentsTask") AS (
+    SELECT t1.title AS "taskProject",
+        0 AS numberPerentsTask
+    FROM tasks AS t1
+    WHERE parent_task IS NULL
+        OR parent_task = ''
+    UNION ALL
+    SELECT t2.title,
+        "numberPerentsTask" + 1 AS numberPerentsTask
+    FROM task_parents AS tp
+        INNER JOIN tasks AS t2 ON tp."taskProject" = t2.parent_task
+)
+SELECT *
+FROM task_parents
 
 
 
