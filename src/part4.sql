@@ -20,6 +20,7 @@ DROP PROCEDURE IF EXISTS proc_list_scalar_func;
 DROP PROCEDURE IF EXISTS proc_list_scalar_func2;
 DROP PROCEDURE IF EXISTS proc_drop_triggers;
 DROP PROCEDURE IF EXISTS proc_print_name_objects;
+DROP FUNCTION IF EXISTS fnc_scalar_f;
 DROP FUNCTION IF EXISTS fnc_test_name;
 DROP FUNCTION IF EXISTS uppercase;
 DROP FUNCTION IF EXISTS add_numbers;
@@ -163,6 +164,22 @@ $DROP_TABLE_NAME$;
 -------------------------------------------
 ------------------ 02 ---------------------
 -------------------------------------------
+
+CREATE OR REPLACE FUNCTION fnc_scalar_f() RETURNS TABLE(
+        name_f TEXT,
+        list_p VARCHAR(255)
+    ) LANGUAGE plpgsql AS
+$SCALAR_FUNCTION$ 
+BEGIN 
+RETURN QUERY
+      SELECT p.proname::TEXT AS name_f, pg_get_function_arguments(p.oid)::VARCHAR AS list_p--, p.proargtypes, p.prorows
+        FROM pg_proc p
+        INNER JOIN pg_namespace n on pronamespace = n.oid
+        WHERE nspname = "current_schema"() AND  pg_get_function_arguments(p.oid) != '' AND p.prokind = 'f' AND p.prorows = 0
+        GROUP BY proname,p.oid;
+END;
+$SCALAR_FUNCTION$;  
+
 CREATE OR REPLACE PROCEDURE proc_list_scalar_func( IN _result_one refcursor DEFAULT 'result')
 LANGUAGE plpgsql AS
 $LIST_SCALAR$
@@ -174,15 +191,11 @@ DECLARE
     list_parameters VARCHAR(255) DEFAULT '';
 BEGIN
     for list in
-        SELECT p.proname AS name_f, pg_get_function_arguments(p.oid) AS list_p--, p.proargtypes, p.prorows
-        FROM pg_proc p
-        INNER JOIN pg_namespace n on pronamespace = n.oid
-        WHERE nspname = "current_schema"() AND  pg_get_function_arguments(p.oid) != '' AND p.prokind = 'f' AND p.prorows = 0
-        GROUP BY proname,p.oid
+        SELECT * FROM fnc_scalar_f()
     LOOP
         name_function := list.name_f;
         list_parameters  := list.list_p;
-        IF name_function != '' THEN
+        IF name_function != ''  THEN
             IF list_out = '' THEN
                 list_out := format('%s(%s) ', name_function, list_parameters);
             ELSE
@@ -191,6 +204,9 @@ BEGIN
             number_function := number_function + 1;
         END IF;
     END LOOP;
+    IF number_function = 0 THEN
+        list_out = NULL;
+    END IF;
     OPEN _result_one for
         SELECT COALESCE(list_out, '''There are no scalar functions''') AS "ScalarFunctions", number_function AS "NumberFunctions";
         RAISE INFO '%', list_out; --?
@@ -210,16 +226,22 @@ $LIST_SCALAR$;
 -- FETCH ALL FROM "s";
 -- END;
 
+
+-- DROP FUNCTION IF EXISTS fnc_test_name;
+-- DROP FUNCTION IF EXISTS uppercase;
+-- DROP FUNCTION IF EXISTS add_numbers;
+
 -- BEGIN;
 -- CALL proc_list_scalar_func('rcursor');
 -- FETCH ALL FROM "rcursor";
 -- END;
 
 --***************************************--
+  
 
 CREATE OR REPLACE PROCEDURE proc_list_scalar_func2( OUT list_out TEXT , OUT number_function INTEGER )
 LANGUAGE plpgsql AS
-$LIST_SCALAR2$
+$LIST_SCALAR_TWO$
 DECLARE
     list RECORD;
     name_function text DEFAULT '';
@@ -228,11 +250,7 @@ BEGIN
     list_out := '';
     number_function := 0;
     for list in
-        SELECT p.proname AS name_f, pg_get_function_arguments(p.oid) AS list_p--, p.proargtypes, p.prorows
-        FROM pg_proc p
-        INNER JOIN pg_namespace n on pronamespace = n.oid
-        WHERE nspname = "current_schema"() AND  pg_get_function_arguments(p.oid) != '' AND p.prokind = 'f' AND p.prorows = 0
-        GROUP BY proname,p.oid
+        SELECT * FROM fnc_scalar_f()
     LOOP
         name_function := list.name_f;
         list_parameters  := list.list_p;
@@ -245,8 +263,11 @@ BEGIN
             number_function := number_function + 1;
         END IF;
     END LOOP;
+    IF number_function = 0 THEN
+        list_out = '''There are no scalar functions''';
+    END IF;
 END;
-$LIST_SCALAR2$;
+$LIST_SCALAR_TWO$;
 
 --***************************************--
 -------------- test ex02 ------------------
@@ -267,7 +288,7 @@ $LIST_SCALAR2$;
 ------------------ 03 ---------------------
 -------------------------------------------
 
-DROP PROCEDURE IF EXISTS proc_drop_triggers;
+
 CREATE OR REPLACE PROCEDURE proc_drop_triggers(IN _result_one refcursor DEFAULT 'result')
 LANGUAGE plpgsql AS
 $DROP_TRIGGER$
@@ -305,20 +326,32 @@ $DROP_TRIGGER$;
 
 --***************************************--
 
+
 -------------------------------------------
 ------------------ 04 ---------------------
 -------------------------------------------
 
 
-CREATE OR REPLACE PROCEDURE proc_print_name_objects(IN str TEXT, IN _result_one refcursor DEFAULT '_print')
-LANGUAGE plpgsql AS
-$PRINT_OBJECTS$
-BEGIN
-OPEN _result_one for
-SELECT DISTINCT r.routine_name AS "NameObject", r.routine_type AS "TypeObject"
+CREATE OR REPLACE PROCEDURE proc_print_name_objects(
+        IN str TEXT,
+        IN _result_one refcursor DEFAULT '_print'
+    ) LANGUAGE plpgsql AS $PRINT_OBJECTS$ BEGIN OPEN _result_one for
+SELECT DISTINCT r.routine_name AS "NameObject",
+    r.routine_type AS "TypeObject"
 FROM information_schema.routines AS r
 WHERE r.specific_schema = "current_schema"()
-AND  r.routine_definition LIKE ( '%' || str || '%'); 
+    AND r.routine_definition LIKE ('%' || str || '%')
+    AND (
+        (
+            r.routine_name = (
+                select name_f
+                FROM fnc_scalar_f()
+                WHERE r.routine_name = name_f
+            )
+            AND r.routine_type = 'FUNCTION'
+        )
+        OR r.routine_type = 'PROCEDURE'
+    );
 END;
 $PRINT_OBJECTS$;
 
@@ -327,7 +360,7 @@ $PRINT_OBJECTS$;
 -------------- test ex03 ------------------
 
 -- BEGIN;
--- CALL proc_print_name_objects('peer');
+-- CALL proc_print_name_objects('END;');
 -- FETCH ALL FROM "_print";
 -- END;
 
