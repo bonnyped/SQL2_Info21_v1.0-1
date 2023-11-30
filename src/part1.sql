@@ -1,7 +1,7 @@
 -- CREATE DATABASE model_s21;
 
-
 -- DROP ALL
+
 DROP TABLE IF EXISTS Friends  CASCADE ;
 DROP TABLE IF EXISTS TransferredPoints;
 DROP TABLE IF EXISTS Recommendations;
@@ -18,17 +18,17 @@ DROP SEQUENCE IF EXISTS id_for_xp CASCADE;
 DROP TYPE IF EXISTS check_state CASCADE;
 DROP TABLE IF EXISTS Peers;
 
-DROP FUNCTION IF EXISTS p2p_success CASCADE;
-DROP FUNCTION IF EXISTS Verter_succes CASCADE;
-DROP FUNCTION IF EXISTS xp_lq_max CASCADE;
+DROP FUNCTION IF EXISTS fnc_p2p_success CASCADE;
+DROP FUNCTION IF EXISTS fnc_verter_succes CASCADE;
+DROP FUNCTION IF EXISTS fnc_xp_lq_max CASCADE;
 
-DROP PROCEDURE IF EXISTS  export_all_tables_to_csv;
-DROP PROCEDURE IF EXISTS  export_table_to_csv;
-DROP PROCEDURE IF EXISTS  import_from_csv;
+DROP PROCEDURE IF EXISTS  proc_export_all_tables_to_csv;
+DROP PROCEDURE IF EXISTS  proc_export_table_to_csv;
+DROP PROCEDURE IF EXISTS  proc_import_from_csv;
 
 -- PROCEDURES EXPORT & IMPORT
 
-CREATE OR REPLACE PROCEDURE export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
+CREATE OR REPLACE PROCEDURE proc_export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_ALL_TABLES$
 DECLARE
@@ -47,7 +47,7 @@ BEGIN
 END;
 $EXPORT_ALL_TABLES$;
 
-CREATE OR REPLACE PROCEDURE export_table_to_csv(table_name_s21 TEXT, path_to_file TEXT, "delim" CHAR DEFAULT ',')
+CREATE OR REPLACE PROCEDURE proc_export_table_to_csv(table_name_s21 TEXT, path_to_file TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_TABLE$
     DECLARE
@@ -59,7 +59,7 @@ BEGIN
 END;
    $EXPORT_TABLE$;
 
-CREATE OR REPLACE PROCEDURE import_from_csv(in s21_table_name VARCHAR, in path_to_file text, delimiter_csv CHAR DEFAULT ',' )
+CREATE OR REPLACE PROCEDURE proc_import_from_csv(in s21_table_name VARCHAR, in path_to_file text, delimiter_csv CHAR DEFAULT ',' )
 LANGUAGE plpgsql AS
 $IMPORT$
 DECLARE
@@ -80,7 +80,7 @@ END;
 $IMPORT$;
 
 -- FUNCTIONS CHECK
-CREATE OR REPLACE FUNCTION p2p_success("checks_id" BIGINT)
+CREATE OR REPLACE FUNCTION fnc_p2p_success("checks_id" BIGINT)
 RETURNS BOOLEAN AS
 $$
 BEGIN
@@ -92,7 +92,7 @@ END;
 $$ LANGUAGE PLpgSQL;
 
 
-CREATE OR REPLACE FUNCTION Verter_success(id_for_check BIGINT) RETURNS boolean
+CREATE OR REPLACE FUNCTION fnc_verter_success(id_for_check BIGINT) RETURNS boolean
     LANGUAGE plpgsql AS
 $$
 BEGIN
@@ -105,7 +105,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION xp_lq_max("check" BIGINT, xp_amount SMALLINT) RETURNS boolean
+CREATE OR REPLACE FUNCTION fnc_xp_lq_max("check" BIGINT, xp_amount SMALLINT) RETURNS boolean
     LANGUAGE plpgsql AS
     $$
     BEGIN
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION xp_lq_max("check" BIGINT, xp_amount SMALLINT) RETURNS
         END;
     $$;
 
--- CREATE ALL 
+-- CREATE ALL
 CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
 CREATE SEQUENCE id_for_p2p;
 CREATE SEQUENCE id_for_checks;
@@ -201,9 +201,9 @@ CREATE TABLE IF NOT EXISTS Verter (
 );
 
 CREATE TABLE IF NOT EXISTS Xp (
-    id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'), 
-    "check"   bigint NOT NULL check ( Verter_success("check") ),
-    XP_amount smallint NOT NULL check ( xp_lq_max("check", XP_amount) ),
+    id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'),
+    "check"   bigint NOT NULL check ( fnc_verter_success("check") ),
+    XP_amount smallint NOT NULL check ( fnc_xp_lq_max("check", XP_amount) ),
     FOREIGN KEY ("check") references checks(id));
 
 
@@ -219,7 +219,7 @@ VALUES ('kennethgraham', '1999-02-23'),
     ('lorigarrett', '1970-09-30'),
     ('josepayne', '1988-01-07'),
     ('frankray', '2005-05-25'),
-    ('lloydmartin', '1999-09-06');
+    ('lloydmartin', '1999-12-06');
 
 INSERT INTO Friends (Peer1, Peer2)
 VALUES ('kennethgraham', 'nancymartinez'),
@@ -274,7 +274,7 @@ VALUES (1, 'laurenwood', '2022-12-23', '10:14', 1),
     (31, 'troybrown', '2023-04-13', '23:59:59', 2);
 
 INSERT INTO tasks(title, parent_task, max_xp)
-VALUES ('C6_s21_matrix','',200),
+VALUES ('C6_s21_matrix', NULL ,200),
         ('C7_SmartCalc_v1.0','C6_s21_matrix',500),
         ('C8_3DViewer_v1.0','C7_SmartCalc_v1.0',750),
         ('CPP1_s21_matrix+','C8_3DViewer_v1.0',300),
@@ -396,12 +396,12 @@ VALUES (1,1,'nancymartinez','start','10:05:00'),
 
 INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
     SELECT p2p.CheckingPeer, Checks.Peer, count(*)
-    FROM p2p JOIN checks ON p2p.Check = Checks.Id 
+    FROM p2p JOIN checks ON p2p.Check = Checks.Id
     WHERE p2p."state" != 'start'
     GROUP BY  p2p.CheckingPeer, checks.Peer;
 
 -- INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
--- VALUES 
+-- VALUES
 --     (1, 'nancywilson', 'kennethgraham', 2),
 --     (2, 'frankray', 'kennethgraham', 1),
 --     (3, 'kennethgraham', 'nancywilson', 1),
@@ -475,7 +475,7 @@ VALUES (1,1,'start','10:45:03'),
         (64,34,'success','22:45:31');
 
 
-INSERT INTO xp (id, "check", XP_amount) 
+INSERT INTO xp (id, "check", XP_amount)
 VALUES (1,1,189),
         (2,2,360),
         (3,3,733),
@@ -517,21 +517,17 @@ VALUES (1,1,189),
 -- tests export/import !!!!!!!
 
 
--- CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
--- CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
+-- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
 -- TRUNCATE TABLE  Friends;
--- CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
+-- CALL import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
 
+    -- tests export/import !!!!!!!
 
-
-
-
-
---Clean tables (!need add other tables!)
-
--- TRUNCATE TABLE  Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
--- TRUNCATE TABLE  Friends;
--- TRUNCATE TABLE  TransferredPoints;
+    --Clean tables (!need add other tables!)
+-- TRUNCATE TABLE Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
+-- TRUNCATE TABLE Friends;
+-- TRUNCATE TABLE TransferredPoints;
 -- TRUNCATE TABLE Recommendations;
 TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE Verter;
@@ -539,60 +535,6 @@ TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE XP;
 -- TRUNCATE TABLE Checks CASCADE
 -- TRUNCATE TABLE Tasks CASCADE
---
-
-
-
--- INSERT INTO Verter ("check", "state", "time")
--- VALUES (2, DEFAULT, current_time + '02:00:11'::time),
---     (2, DEFAULT, current_time + '02:00:11'::time);
--- SELECT datname FROM pg_database WHERE datname = 'model_s21';
-
--- SELECT pg_database_size(current_database());
--- SELECT pg_database_size('model_s21');
--- SELECT pg_size_pretty(pg_database_size(current_database()));
-
--- SELECT table_name FROM information_schema.tables
--- WHERE table_schema NOT IN ('information_schema','pg_catalog');
-
-CALL import_from_csv('timetracking', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/111/SQL2_Info21_v1.0-1/src/timetracking.csv', ',');
--- CALL import_from_csv('checks', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/checks.csv', ';');
--- CALL import_from_csv('p2p', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/p2p.csv', ';');
--- CALL import_from_csv('verter', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/verter.csv', ',');
--- CALL import_from_csv('xp', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/xp.csv', ',');
-
--- tests export/import !!!!!!!
-
-
--- CALL export_all_tables_to_csv('/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
--- CALL export_table_to_csv('Friends','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/', '&');
--- TRUNCATE TABLE  Friends;
--- CALL import_from_csv('FrieNds','/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/Friends.csv', '&')
---
---
-
-
-
--- INSERT INTO Verter ("check", "state", "time")
--- VALUES (2, DEFAULT, current_time + '02:00:11'::time),
---     (2, DEFAULT, current_time + '02:00:11'::time);
--- SELECT datname FROM pg_database WHERE datname = 'model_s21';
-
--- SELECT pg_database_size(current_database());
--- SELECT pg_database_size('model_s21');
--- SELECT pg_size_pretty(pg_database_size(current_database()));
-
--- SELECT table_name FROM information_schema.tables
--- WHERE table_schema NOT IN ('information_schema','pg_catalog');
-
-
---- нужно будет раскомментить потом 
-
--- DROP TABLE IF EXISTS xp;
--- DROP TABLE IF EXISTS verter;
--- DROP TABLE IF EXISTS p2p;
--- DROP TABLE IF EXISTS checks;
--- DROP TABLE IF EXISTS tasks;
 
 -- DROP SEQUENCE IF EXISTS id_for_checks CASCADE ;
 -- DROP SEQUENCE IF EXISTS id_for_p2p CASCADE;
@@ -604,47 +546,19 @@ CALL import_from_csv('timetracking', '/Users/nikolaysurkov/Documents/project_s21
 -- CREATE SEQUENCE id_for_verter;
 -- CREATE SEQUENCE id_for_xp;
 
--- CREATE TABLE IF NOT EXISTS Tasks (
---     "title" varchar PRIMARY KEY,
---     parent_task varchar,
---     max_xp smallint DEFAULT 0
--- );
+-- CALL import_from_csv('peers', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/peers.csv', ';');
+-- CALL import_from_csv('tasks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/tasks.csv', ';');
+-- CALL import_from_csv('friends', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/friends.csv', ';');
+-- CALL import_from_csv('recommendations', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/recommendations.csv', ';');
+-- CALL import_from_csv('timetracking', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/timetracking.csv', ';');
 
--- CREATE TABLE IF NOT EXISTS Checks (
---     id bigint PRIMARY KEY DEFAULT nextval('id_for_checks'),
---     peer varchar NOT NULL,
---     task varchar NOT NULL,
---     "date" date NOT NULL DEFAULT current_date,
---     FOREIGN KEY (peer) references Peers(nickname),
---     FOREIGN KEY (task) references tasks(title)
--- );
+-- CALL import_from_csv('checks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/checks.csv', ';');
+-- CALL import_from_csv('p2p', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/p2p.csv', ';');
+-- CALL import_from_csv('verter', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/verter.csv', ',');
+-- CALL import_from_csv('transferredpoints', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/transferredpoints.csv', ';');
+-- CALL import_from_csv('xp', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/xp.csv', ',');
 
--- CREATE TABLE IF NOT EXISTS p2p (
---     id bigint PRIMARY KEY DEFAULT nextval('id_for_p2p'),
---     "check" bigint NOT NULL,
---     CheckingPeer varchar NOT NULL,
---     "state" check_state DEFAULT 'start'::check_state,
---     "time" time NOT NULL DEFAULT current_time,
---     FOREIGN KEY ("check") references checks(id),
---     FOREIGN KEY (CheckingPeer) references Peers(nickname)
--- );
-
--- CREATE TABLE IF NOT EXISTS Verter (
---   id bigint PRIMARY KEY DEFAULT nextval('id_for_verter'),
---   "check" bigint NOT NULL,
---   "state" check_state DEFAULT 'start'::check_state,
---   "time" time DEFAULT current_time,
---   FOREIGN KEY ("check") references checks(id)
--- );
-
--- CREATE TABLE IF NOT EXISTS Xp (
---     id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'),
---     "check"   bigint NOT NULL check ( Verter_success("check") ),
---     XP_amount smallint NOT NULL check ( xp_lq_max("check", XP_amount) ),
---     FOREIGN KEY ("check") references checks(id));
-
--- CALL import_from_csv('tasks', 'C:\Users\devik\Desktop\new\tasks.csv', ',');
--- CALL import_from_csv('checks', 'C:\Users\devik\Desktop\new\checks.csv', ',');
--- CALL import_from_csv('p2p', 'C:\Users\devik\Desktop\new\p2p.csv', ',');
--- CALL import_from_csv('verter', 'C:\Users\devik\Desktop\new\verter.csv', ',');
--- CALL import_from_csv('xp', 'C:\Users\devik\Desktop\new\xp.csv', ',');
+-- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- TRUNCATE TABLE  Friends;
+-- CALL import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
