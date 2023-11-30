@@ -113,25 +113,30 @@ SELECT * FROM fnc_checks_task_xp();
 
 ----------- 03 -----------
 CREATE OR REPLACE FUNCTION fnc_hardworking_peers("Day" DATE) RETURNS TABLE(
-        "Peer" VARCHAR
-    ) LANGUAGE plpgsql AS 
+    "Peer" VARCHAR
+    ) 
+LANGUAGE plpgsql AS
 $HARDWORKING_PEERS$
-BEGIN 
+BEGIN
 RETURN QUERY
-SELECT  DISTINCT tt.peer
-FROM timetracking AS tt WHERE tt."Date" = "Day" AND tt."State" = 1
-GROUP BY tt."State" , tt.peer
-EXCEPT
-SELECT  DISTINCT tt.peer
-FROM timetracking AS tt WHERE tt."Date" = "Day" AND tt."State" = 2
-GROUP BY tt."State" , tt.peer;
+WITH all_track AS (
+        SELECT tt.peer,
+            count(*) AS number_do
+        FROM timetracking AS tt
+        WHERE tt."Date" = "Day"
+        GROUP BY tt.peer
+    )
+SELECT peer AS "Peer"
+FROM all_track
+WHERE number_do = 2;
 END;
 $HARDWORKING_PEERS$;
 
 
 -- test 03
+SELECT * FROM fnc_hardworking_peers('2022-12-23');
 SELECT * FROM fnc_hardworking_peers('2022-12-24');
-
+SELECT * FROM fnc_hardworking_peers('2022-12-25');
 ----------- 04 -----------
 
 CREATE OR REPLACE FUNCTION fnc_points_traffic_all() RETURNS TABLE(

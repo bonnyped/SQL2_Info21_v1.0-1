@@ -533,7 +533,7 @@ VALUES (1,1,189),
 -- TRUNCATE TABLE  Friends;
 -- TRUNCATE TABLE  TransferredPoints;
 -- TRUNCATE TABLE Recommendations;
--- TRUNCATE TABLE TimeTracking;
+TRUNCATE TABLE TimeTracking;
 -- TRUNCATE TABLE Verter;
 -- TRUNCATE TABLE p2p;
 -- TRUNCATE TABLE XP;
@@ -555,7 +555,7 @@ VALUES (1,1,189),
 -- SELECT table_name FROM information_schema.tables
 -- WHERE table_schema NOT IN ('information_schema','pg_catalog');
 
--- CALL import_from_csv('tasks', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/tasks.csv', ';');
+CALL import_from_csv('timetracking', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/111/SQL2_Info21_v1.0-1/src/timetracking.csv', ',');
 -- CALL import_from_csv('checks', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/checks.csv', ';');
 -- CALL import_from_csv('p2p', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/p2p.csv', ';');
 -- CALL import_from_csv('verter', '/Users/nikolaysurkov/Documents/project_s21/BOOTCAMP_SQL/SQL2_Info21_v1.0-1/src/verter.csv', ',');
