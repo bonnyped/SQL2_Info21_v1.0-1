@@ -319,6 +319,8 @@ AFTER INSERT ON p2p
 -----
 ----- test 01
 -----
+SELECT * FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
+
 INSERT INTO checks (id,peer, task, date)
 VALUES ( 100,'frankray','A1_MAZE', CURRENT_DATE);
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
@@ -326,7 +328,7 @@ VALUES (100,'lorigarrett','start',current_time),
 (100,'lorigarrett','success',current_time + '00:25:30'::TIME);
 
 SELECT * FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
-DELETE FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
+DELETE FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray'; 
 DELETE FROM p2p WHERE "check" = 100;
 DELETE FROM checks WHERE id = 100;
 -----
@@ -336,7 +338,7 @@ INSERT INTO checks (id,peer, task, date)
 VALUES ( 101,'frankray','A2_SimpleNavigator v1.0', CURRENT_DATE);
 INSERT INTO p2p ("check", checkingpeer, "state", "time")
 VALUES (101,'lorigarrett','start',current_time),
-(101,'lorigarrett','fail',current_time + '00:25:30'::TIME);
+(101,'lorigarrett','success',current_time + '00:25:30'::TIME);
 
 SELECT * FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
 
@@ -368,10 +370,11 @@ CREATE OR REPLACE FUNCTION fnc_trg_insert_xp() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $INSERT_XP$
          BEGIN
-    IF NOT (verter_success(NEW."check")) THEN
+    IF NOT (fnc_p2p_or_verter_success(NEW."check")) THEN
+        RAISE EXCEPTION 'Autotest VERTER = ''fail'' for verification %', NEW."check";
         RETURN NULL;
         ELSE
-            IF NOT (xp_lq_max(NEW."check", NEW.xp_amount)) THEN
+            IF NOT (fnc_xp_lq_max(NEW."check", NEW.xp_amount)) THEN
                 RAISE EXCEPTION 'More than max_xp in check %', NEW."check";
                 ELSE
                 RETURN NEW;
@@ -391,13 +394,31 @@ EXECUTE FUNCTION fnc_trg_insert_xp();
 ------------------- tests ex04 -----------------------
 ------------------------------------------------------
 
-
+-----
 ----- test 01
-
-
+-----
+INSERT INTO xp ("check", XP_amount)
+VALUES (100,301);
+SELECT * FROM xp WHERE "check" = 100;
+DELETE FROM xp WHERE "check" = 100;
+-----
 ----- test 02
-
-
+-----
+DELETE FROM xp WHERE "check" = 101;
+SELECT * FROM xp WHERE "check" = 101;
+INSERT INTO xp ("check", XP_amount)
+VALUES (101,400);
+-----
 ----- test 03
+-----
+DELETE FROM xp WHERE "check" = 100;
+DELETE FROM verter WHERE "check" = 100;
+INSERT INTO verter (id, "check", "state", "time")
+VALUES (1000,100,'start','10:45:03'),
+        (1001,100,'fail','10:45:45');
+SELECT * FROM verter WHERE "check" = 100;
+INSERT INTO xp ("check", XP_amount)
+VALUES (100,300);
+SELECT * FROM xp WHERE "check" = 100;
 
 
