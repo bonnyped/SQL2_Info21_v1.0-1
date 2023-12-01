@@ -10,76 +10,126 @@ DROP PROCEDURE IF EXISTS proc_adding_p2p(checked_peer_checks VARCHAR, checking_p
 DROP TRIGGER IF EXISTS trg_person_points ON p2p CASCADE;
 DROP FUNCTION IF EXISTS fnc_trg_TransferredPoints();
 
--- ex1
+DROP TRIGGER IF EXISTS trg_pre_adding_xp ON p2p CASCADE;
+DROP FUNCTION IF EXISTS fnc_trg_TransferredPoints();
+
+--------------------------------------------------------
+------------------------  ex01  ------------------------
+--------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE proc_must_have_project_done(peer_dep VARCHAR(255), task_dep VARCHAR(255))
-    LANGUAGE plpgsql AS
+LANGUAGE plpgsql AS
 $MUST_HAVE_PROJECT_DONE$
-DECLARE
-    state_of_must_have_project check_state;
-BEGIN
-    WITH needed_task AS (SELECT parent_task accept_task
-                         FROM tasks
-                         WHERE title = task_dep),
-         needed_id_of_checks AS (SELECT c.id
-                                 FROM checks c
-                                          JOIN needed_task nt ON nt.accept_task = c.task
-                                 WHERE c.peer = peer_dep
-                                 ORDER BY date DESC
-                                 LIMIT 1)
-    SELECT *
-    INTO state_of_must_have_project
-    FROM xp
-             JOIN needed_id_of_checks nc ON nc.id = xp."check";
-    IF state_of_must_have_project IS NULL THEN
-        RAISE EXCEPTION 'Must have project not done';
-    END IF;
+DECLARE state_of_must_have_project check_state;
+BEGIN WITH needed_task AS (
+    SELECT parent_task accept_task
+    FROM tasks
+    WHERE title = task_dep
+),
+needed_id_of_checks AS (
+    SELECT c.id
+    FROM checks c
+        JOIN needed_task nt ON nt.accept_task = c.task
+    WHERE c.peer = peer_dep
+    ORDER BY date DESC
+    LIMIT 1
+)
+SELECT * INTO state_of_must_have_project
+FROM xp
+    JOIN needed_id_of_checks nc ON nc.id = xp."check";
+IF state_of_must_have_project IS NULL THEN RAISE EXCEPTION 'Must have project not done';
+END IF;
 END;
 $MUST_HAVE_PROJECT_DONE$;
 
-CREATE OR REPLACE PROCEDURE proc_dependency_lookup(peer_dep VARCHAR(255), task_dep VARCHAR(255), state_dep check_state)
-LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP$
-DECLARE
-    id_for_lookup    BIGINT := (SELECT max(c.id)
-                                FROM checks c
-                                WHERE c.peer = peer_dep AND c.task = task_dep);
-    state_for_lookup check_state := (SELECT p.state
-                                    FROM p2p p
-                                    WHERE id_for_lookup = p."check"
-                                    ORDER BY p.time DESC
-                                    LIMIT 1);
-BEGIN
-    CALL proc_must_have_project_done(peer_dep, task_dep);
-    IF ((state_dep != 'start' AND state_for_lookup != 'start') OR (state_dep = 'start' AND state_for_lookup = 'start'))
-        THEN
-        RAISE EXCEPTION 'The inserted data is not consistent with the data posted earlier in the p2p verification table ';
-    END IF;
-    DROP TABLE IF EXISTS state_for_lookup;
+----------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE proc_dependency_lookup(
+        peer_dep VARCHAR(255),
+        task_dep VARCHAR(255),
+        state_dep check_state
+    ) LANGUAGE plpgsql AS
+$DEPENDENCY_LOOKUP$
+DECLARE id_for_lookup BIGINT := (
+        SELECT max(c.id)
+        FROM checks c
+        WHERE c.peer = peer_dep
+            AND c.task = task_dep
+    );
+state_for_lookup check_state := (
+    SELECT p.state
+    FROM p2p p
+    WHERE id_for_lookup = p."check"
+    ORDER BY p.time DESC
+    LIMIT 1
+);
+BEGIN CALL proc_must_have_project_done(peer_dep, task_dep);
+IF (
+    (
+        state_dep != 'start'
+        AND state_for_lookup != 'start'
+    )
+    OR (
+        state_dep = 'start'
+        AND state_for_lookup = 'start'
+    )
+) THEN RAISE EXCEPTION 'The inserted data is not consistent with the data posted earlier in the p2p verification table ';
+END IF;
+DROP TABLE IF EXISTS state_for_lookup;
 END;
-    $DEPENDENCY_LOOKUP$;
+$DEPENDENCY_LOOKUP$;
 
-CREATE OR REPLACE PROCEDURE proc_adding_p2p(checked_peer_checks  VARCHAR(255), checking_peer_p2p  VARCHAR(255),
-                                       "title_tasks" VARCHAR(255), state_p2p check_state, time_to_checks time)
-    LANGUAGE plpgsql AS $ADDING_P2P$
-    DECLARE
-        needed_id BIGINT DEFAULT (SELECT max(c2.id)
-                       FROM p2p p
-                                JOIN checks c2 ON p."check" = c2.id AND c2.peer = checked_peer_checks AND
-                                                  c2.task = "title_tasks" AND p.checkingpeer = checking_peer_p2p);
-    BEGIN
-        CALL proc_dependency_lookup(checked_peer_checks, "title_tasks", state_p2p);
-        IF state_p2p = 'start' THEN
-           INSERT INTO checks (peer, task, date)
-           VALUES (checked_peer_checks, "title_tasks", current_date::date);
-           INSERT INTO p2p ("check", checkingpeer, state, time)
-           VALUES ((SELECT max(id) FROM checks c), checking_peer_p2p, state_p2p, time_to_checks);
-        ELSE INSERT INTO p2p ("check", checkingpeer, state, time)
-             VALUES (needed_id, checking_peer_p2p, state_p2p, time_to_checks);
-        END IF;
-    END;
-    $ADDING_P2P$;
+-------------------------------------------------
 
--- tests for ex 1
+CREATE OR REPLACE PROCEDURE proc_adding_p2p(
+        checked_peer_checks VARCHAR(255),
+        checking_peer_p2p VARCHAR(255),
+        "title_tasks" VARCHAR(255),
+        state_p2p check_state,
+        time_to_checks time
+    ) LANGUAGE plpgsql AS
+$ADDING_P2P$
+DECLARE needed_id BIGINT DEFAULT (
+        SELECT max(c2.id)
+        FROM p2p p
+            JOIN checks c2 ON p."check" = c2.id
+            AND c2.peer = checked_peer_checks
+            AND c2.task = "title_tasks"
+            AND p.checkingpeer = checking_peer_p2p
+    );
+BEGIN CALL proc_dependency_lookup(checked_peer_checks, "title_tasks", state_p2p);
+IF state_p2p = 'start' THEN
+INSERT INTO checks (peer, task, date)
+VALUES (
+        checked_peer_checks,
+        "title_tasks",
+        current_date::date
+    );
+INSERT INTO p2p ("check", checkingpeer, state, time)
+VALUES (
+        (
+            SELECT max(id)
+            FROM checks c
+        ),
+        checking_peer_p2p,
+        state_p2p,
+        time_to_checks
+    );
+ELSE
+INSERT INTO p2p ("check", checkingpeer, state, time)
+VALUES (
+        needed_id,
+        checking_peer_p2p,
+        state_p2p,
+        time_to_checks
+    );
+END IF;
+END;
+$ADDING_P2P$;
+
+-- ************************************************ --
+------------------- tests ex01 -----------------------
+------------------------------------------------------
 
 SELECT *
 FROM checks c
@@ -108,70 +158,108 @@ WHERE c.peer = 'troybrown'
 
 CALL proc_adding_p2p('laurenwood', 'troybrown', 'CPP2_s21_containers', 'start', current_time::time);
 
--- ex2
+--------------------------------------------------------
+------------------------  ex02  ------------------------
+--------------------------------------------------------
 
-WITH needed_task AS (SELECT parent_task accept_task
-                         FROM tasks
-                         WHERE title = 'CPP2_s21_containers'),
-         needed_id_of_checks AS (SELECT c.id
-                                 FROM checks c
-                                          JOIN needed_task nt ON nt.accept_task = c.task
-                                 WHERE c.peer = 'laurenwood'
-                                 ORDER BY date DESC
-                                 LIMIT 1)
-    SELECT *
-    FROM xp
-             JOIN needed_id_of_checks nc ON nc.id = xp."check";
+WITH needed_task AS (
+    SELECT parent_task accept_task
+    FROM tasks
+    WHERE title = 'CPP2_s21_containers'
+),
+needed_id_of_checks AS (
+    SELECT c.id
+    FROM checks c
+        JOIN needed_task nt ON nt.accept_task = c.task
+    WHERE c.peer = 'laurenwood'
+    ORDER BY date DESC
+    LIMIT 1
+)
+SELECT *
+FROM xp
+    JOIN needed_id_of_checks nc ON nc.id = xp."check";
 
 CREATE OR REPLACE PROCEDURE proc_dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
-LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
-    DECLARE
-        state_for_lookup check_state;
-        start_eq check_state := 'start';
-    BEGIN
-        SELECT "state"
-        INTO state_for_lookup
+LANGUAGE plpgsql AS
+$DEPENDENCY_LOOKUP_VERTER$
+DECLARE state_for_lookup check_state;
+    start_eq check_state := 'start';
+BEGIN
+    SELECT "state" INTO state_for_lookup
+    FROM verter v
+    WHERE v."check" = id_to_check
+    ORDER BY "time" DESC
+    LIMIT 1;
+    IF id_to_check IS NULL THEN RAISE EXCEPTION '1 - There is no check in CHECKS and P2P TABLES with this parametrs';
+    ELSIF (
+        (
+            state_dep = start_eq
+            AND state_for_lookup = start_eq
+        )
+        OR (
+            state_dep != start_eq
+            AND state_for_lookup != start_eq
+        )
+    ) THEN RAISE EXCEPTION '2 - The inserting data is already inserted in VERTER TABLE';
+    ELSIF (
+        state_dep = start_eq
+        AND id_to_check IN (
+            SELECT v."check"
             FROM verter v
-        WHERE v."check" = id_to_check
-        ORDER BY "time" DESC
-        LIMIT 1;
-        IF id_to_check IS NULL THEN
-            RAISE EXCEPTION '1 - There is no check in CHECKS and P2P TABLES with this parametrs';
-        ELSIF ((state_dep = start_eq AND state_for_lookup = start_eq) OR (state_dep != start_eq
-            AND state_for_lookup != start_eq)) THEN
-            RAISE EXCEPTION '2 - The inserting data is already inserted in VERTER TABLE';
-        ELSIF (state_dep = start_eq AND
-               id_to_check IN (SELECT v."check" FROM verter v WHERE v.state = state_dep)) THEN
-            RAISE EXCEPTION '3 - This verter check was already started in VERTER TABLE';
-        ELSIF (state_dep != start_eq AND
-               (SELECT v.state FROM verter v WHERE v."check" = id_to_check ORDER BY 1 LIMIT 1) !=
-               start_eq) THEN
-            RAISE EXCEPTION '4 - This verter check was already ended in VERTER TABLE';
-        ELSIF (SELECT p.state FROM p2p p WHERE p."check" = id_to_check ORDER BY p.time DESC LIMIT 1) !=
-               'success'::check_state THEN
-            RAISE EXCEPTION '5 - For this id from CHECKS TABLE there is no success passed p2p check in P2P TABLE';
-        END IF;
-        END;
-    $DEPENDENCY_LOOKUP_VERTER$;
+            WHERE v.state = state_dep
+        )
+    ) THEN RAISE EXCEPTION '3 - This verter check was already started in VERTER TABLE';
+    ELSIF (
+        state_dep != start_eq
+        AND (
+            SELECT v.state
+            FROM verter v
+            WHERE v."check" = id_to_check
+            ORDER BY 1
+            LIMIT 1
+        ) != start_eq
+    ) THEN RAISE EXCEPTION '4 - This verter check was already ended in VERTER TABLE';
+    ELSIF (
+        SELECT p.state
+        FROM p2p p
+        WHERE p."check" = id_to_check
+        ORDER BY p.time DESC
+        LIMIT 1
+    ) != 'success'::check_state THEN RAISE EXCEPTION '5 - For this id from CHECKS TABLE there is no success passed p2p check in P2P TABLE';
+    END IF;
+END;
+$DEPENDENCY_LOOKUP_VERTER$;
 
-CREATE OR REPLACE PROCEDURE proc_adding_verter(peer_from_checks VARCHAR(255), task_from_checks VARCHAR(255), "state_to_verter" check_state, "time_to_verter" time)
-LANGUAGE plpgsql AS $ADDING_VERTER$
-    DECLARE
-        id_from_checks BIGINT;
-    BEGIN
-        SELECT c.id foreign_key_for_verter
-        INTO id_from_checks
-        FROM checks c
-        JOIN p2p p on c.id = p."check" AND c.peer = peer_from_checks AND c.task = task_from_checks
-        ORDER BY c.date DESC, p.time DESC
-        LIMIT 1;
-        CALL proc_dependency_lookup_for_verter(id_from_checks, "state_to_verter");
-        INSERT INTO verter ("check", "state", "time")
-        VALUES (id_from_checks, state_to_verter, "time_to_verter");
-    END;
-    $ADDING_VERTER$;
+CREATE OR REPLACE PROCEDURE proc_adding_verter(
+        peer_from_checks VARCHAR(255),
+        task_from_checks VARCHAR(255),
+        "state_to_verter" check_state,
+        "time_to_verter" time
+    ) LANGUAGE plpgsql AS
+$ADDING_VERTER$
+DECLARE id_from_checks BIGINT;
+BEGIN
+SELECT c.id foreign_key_for_verter INTO id_from_checks
+FROM checks c
+    JOIN p2p p on c.id = p."check"
+    AND c.peer = peer_from_checks
+    AND c.task = task_from_checks
+ORDER BY c.date DESC,
+    p.time DESC
+LIMIT 1;
+CALL proc_dependency_lookup_for_verter(id_from_checks, "state_to_verter");
+INSERT INTO verter ("check", "state", "time")
+VALUES (
+        id_from_checks,
+        state_to_verter,
+        "time_to_verter"
+    );
+END;
+$ADDING_VERTER$;
 
--- tests for ex2
+-- ************************************************ --
+------------------- tests ex02 -----------------------
+------------------------------------------------------
 -- проверка на то, что не добавляется запись, в случае, если нет успешной по чек проверки в таблице п2п
 
 CALL proc_adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
@@ -246,7 +334,7 @@ AFTER INSERT ON p2p
 --------------------------------------------------------
 
 
-CREATE OR REPLACE FUNCTION insert_xp() RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION fnc_trg_insert_xp() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $INSERT_XP$
          BEGIN
@@ -266,7 +354,7 @@ CREATE TRIGGER trg_pre_adding_xp
     BEFORE INSERT
     ON xp
     FOR EACH ROW
-EXECUTE FUNCTION insert_xp();
+EXECUTE FUNCTION fnc_trg_insert_xp();
 
 
 -- ************************************************ --
