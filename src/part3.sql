@@ -344,57 +344,8 @@ CREATE OR REPLACE PROCEDURE proc_peers_ended_this_block(block_name VARCHAR(255),
                      JOIN xp on c.id = xp."check"
             WHERE substring(c.task FROM '[A-Z]+') = block_name
             ORDER BY 2 DESC;
-CREATE OR REPLACE PROCEDURE proc_peers_ended_this_block(block_name VARCHAR(255), result_ REFCURSOR DEFAULT 'result_query')
-LANGUAGE plpgsql AS $FIND_PEERS_ENDED_BLOCK$
-BEGIN
-OPEN result_ for
-WITH first_project_of_core AS (
-    SELECT t.title
-    FROM tasks t
-    WHERE parent_task IS NULL
-),
-last_project_from_block1 AS (
-    SELECT t2.parent_task
-    FROM tasks t2
-    WHERE substring(t2.title, '[A-Z]+') != substring(t2.parent_task, '[A-Z]+')
-),
-last_project_from_block2 AS (
-    SELECT lpfb1.parent_task
-    FROM last_project_from_block1 lpfb1,
-        first_project_of_core fpoc
-    WHERE lpfb1.parent_task != fpoc.title
-),
-union_title_plus_parrent AS (
-    SELECT t3.title
-    FROM tasks t3
-    UNION ALL
-    SELECT t4.parent_task
-    FROM tasks t4
-),
-last_project_tupic_branch AS (
-    SELECT utpp.title,
-        count(utpp.title) detect
-    FROM union_title_plus_parrent utpp
-    GROUP BY 1
-),
-all_last_pojects AS (
-    SELECT lptb.title
-    FROM last_project_tupic_branch lptb
-    WHERE lptb.detect = 1
-    UNION ALL
-    SELECT *
-    FROM last_project_from_block2
-)
-SELECT c.peer,
-    c.date "day"
-FROM checks c
-    JOIN all_last_pojects alp ON alp.title = c.task
-    JOIN verter v on c.id = v."check"
-WHERE v.state = 'success'::check_state
-    AND  substring(c.task, '[A-Z]+') = block_name
-ORDER BY 2 DESC;
 END;
-    $FIND_PEERS_ENDED_BLOCK$ ;
+    $FIND_PEERS_ENDED_BLOCK$;
 
 
 --****************************************--
