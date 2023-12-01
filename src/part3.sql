@@ -518,31 +518,39 @@ call proc_third_task_not_completed(
 );
 FETCH ALL FROM "result";
 END;
+
 ----------- 12 -----------
 
+CREATE OR REPLACE PROCEDURE proc_view_number_of_parent_projects(INOUT reslut REFCURSOR DEFAULT 'result_query')
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    open reslut for
+    WITH RECURSIVE task_parents ("taskProject", "numberPerentsTask") AS (
+        SELECT t1.title AS "taskProject",
+               0        AS numberPerentsTask
+        FROM tasks AS t1
+        WHERE parent_task IS NULL
+           OR parent_task = ''
+        UNION ALL
+        SELECT t2.title,
+               "numberPerentsTask" + 1 AS numberPerentsTask
+        FROM task_parents AS tp
+                 INNER JOIN tasks AS t2 ON tp."taskProject" = t2.parent_task
+    )
+    SELECT *
+    FROM task_parents;
+END;
+$$;
 
-
-WITH RECURSIVE task_parents ("taskProject", "numberPerentsTask") AS (
-    SELECT t1.title AS "taskProject",
-        0 AS numberPerentsTask
-    FROM tasks AS t1
-    WHERE parent_task IS NULL
-        OR parent_task = ''
-    UNION ALL
-    SELECT t2.title,
-        "numberPerentsTask" + 1 AS numberPerentsTask
-    FROM task_parents AS tp
-        INNER JOIN tasks AS t2 ON tp."taskProject" = t2.parent_task
-)
-SELECT *
-FROM task_parents
-
-
-
-
+BEGIN;
+CALL proc_view_number_of_parent_projects();
+FETCH ALL FROM result_query;
+END;
 
 
 ----------- 13 -----------
+
 DROP FUNCTION IF EXISTS fnc_statistic_checks;
 CREATE OR REPLACE FUNCTION fnc_statistic_checks() RETURNS TABLE(
         checks_id BIGINT,
