@@ -121,15 +121,15 @@ CREATE OR REPLACE FUNCTION fnc_xp_lq_max("check" BIGINT, xp_amount SMALLINT) RET
     LANGUAGE plpgsql AS
     $$
     BEGIN
---         IF (SELECT max_xp
---             FROM tasks t,
---                  checks ch
---             WHERE t.title = ch.task
---               AND "check" = ch.id) >= xp_amount THEN
---             RETURN TRUE;
---             ELSE
---             RETURN FALSE;
---         END IF;
+        IF (SELECT max_xp
+            FROM tasks t,
+                 checks ch
+            WHERE t.title = ch.task
+              AND "check" = ch.id) >= xp_amount THEN
+            RETURN TRUE;
+            ELSE
+            RETURN FALSE;
+        END IF;
         RETURN TRUE;
         END;
     $$;
