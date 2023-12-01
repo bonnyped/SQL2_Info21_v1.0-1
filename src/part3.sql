@@ -394,7 +394,7 @@ WHERE v.state = 'success'::check_state
     AND  substring(c.task, '[A-Z]+') = block_name
 ORDER BY 2 DESC;
 END;
-    $FIND_PEERS_ENDED_BLOCK$;
+    $FIND_PEERS_ENDED_BLOCK$ ;
 
 
 --****************************************--
