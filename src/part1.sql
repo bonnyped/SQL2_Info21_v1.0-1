@@ -530,7 +530,7 @@ VALUES (1,189),
 -- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
 -- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
 -- TRUNCATE TABLE  Friends;
--- CALL import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
+-- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
 
     -- tests export/import !!!!!!!
 
@@ -556,19 +556,19 @@ VALUES (1,189),
 -- CREATE SEQUENCE id_for_verter;
 -- CREATE SEQUENCE id_for_xp;
 
--- CALL import_from_csv('peers', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/peers.csv', ';');
--- CALL import_from_csv('tasks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/tasks.csv', ';');
--- CALL import_from_csv('friends', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/friends.csv', ';');
--- CALL import_from_csv('recommendations', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/recommendations.csv', ';');
--- CALL import_from_csv('timetracking', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/timetracking.csv', ';');
+-- CALL proc_import_from_csv('peers', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/peers.csv', ';');
+-- CALL proc_import_from_csv('tasks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/tasks.csv', ';');
+-- CALL proc_import_from_csv('friends', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/friends.csv', ';');
+-- CALL proc_import_from_csv('recommendations', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/recommendations.csv', ';');
+-- CALL proc_import_from_csv('timetracking', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/timetracking.csv', ';');
 
--- CALL import_from_csv('checks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/checks.csv', ';');
--- CALL import_from_csv('p2p', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/p2p.csv', ';');
--- CALL import_from_csv('verter', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/verter.csv', ',');
--- CALL import_from_csv('transferredpoints', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/transferredpoints.csv', ';');
--- CALL import_from_csv('xp', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/xp.csv', ',');
+-- CALL proc_import_from_csv('checks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/checks.csv', ';');
+-- CALL proc_import_from_csv('p2p', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/p2p.csv', ';');
+-- CALL proc_import_from_csv('verter', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/verter.csv', ',');
+-- CALL proc_import_from_csv('transferredpoints', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/transferredpoints.csv', ';');
+-- CALL proc_import_from_csv('xp', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/xp.csv', ',');
 
--- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
--- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL proc_export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL proc_export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
 -- TRUNCATE TABLE  Friends;
--- CALL import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
+-- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
