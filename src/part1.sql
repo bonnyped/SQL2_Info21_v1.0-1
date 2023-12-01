@@ -19,7 +19,7 @@ DROP TYPE IF EXISTS check_state CASCADE;
 DROP TABLE IF EXISTS Peers;
 
 DROP FUNCTION IF EXISTS fnc_p2p_success CASCADE;
-DROP FUNCTION IF EXISTS fnc_verter_success CASCADE;
+DROP FUNCTION IF EXISTS fnc_p2p_or_verter_success CASCADE;
 DROP FUNCTION IF EXISTS fnc_xp_lq_max CASCADE;
 
 DROP PROCEDURE IF EXISTS  proc_export_all_tables_to_csv;
@@ -91,17 +91,29 @@ END IF;
 END;
 $$ LANGUAGE PLpgSQL;
 
+CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
 
-CREATE OR REPLACE FUNCTION fnc_verter_success(id_for_check BIGINT) RETURNS boolean
+CREATE OR REPLACE FUNCTION fnc_p2p_or_verter_success(id_for_check BIGINT) RETURNS boolean
     LANGUAGE plpgsql AS
 $$
+DECLARE
+    state_of_check_in_verter check_state := (SELECT state
+                                             FROM Verter v
+                                             WHERE v."check" = id_for_check
+                                               AND v.state != 'start');
+    state_of_check_in_p2p    check_state := (SELECT state
+                                             FROM p2p p
+                                             WHERE p."check" = id_for_check
+                                               AND p.state != 'start');
 BEGIN
-    IF (SELECT state FROM Verter v WHERE v."check" = id_for_check AND v.state != 'start') = 'success'
-    THEN
-        RETURN TRUE;
-    ELSE
+    IF state_of_check_in_p2p = 'fail' THEN
         RETURN FALSE;
+    ELSE
+        IF state_of_check_in_verter = 'fail' THEN
+            RETURN FALSE;
+        END IF;
     END IF;
+    RETURN TRUE;
 END;
 $$;
 
@@ -109,20 +121,20 @@ CREATE OR REPLACE FUNCTION fnc_xp_lq_max("check" BIGINT, xp_amount SMALLINT) RET
     LANGUAGE plpgsql AS
     $$
     BEGIN
-        IF (SELECT max_xp
-            FROM tasks t,
-                 checks ch
-            WHERE t.title = ch.task
-              AND "check" = ch.id) >= xp_amount THEN
-            RETURN TRUE;
-            ELSE
-            RETURN FALSE;
-        END IF;
+--         IF (SELECT max_xp
+--             FROM tasks t,
+--                  checks ch
+--             WHERE t.title = ch.task
+--               AND "check" = ch.id) >= xp_amount THEN
+--             RETURN TRUE;
+--             ELSE
+--             RETURN FALSE;
+--         END IF;
+        RETURN TRUE;
         END;
     $$;
 
 -- CREATE ALL
-CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
 CREATE SEQUENCE id_for_p2p;
 CREATE SEQUENCE id_for_checks;
 CREATE SEQUENCE id_for_verter;
@@ -202,11 +214,9 @@ CREATE TABLE IF NOT EXISTS Verter (
 
 CREATE TABLE IF NOT EXISTS Xp (
     id        bigint PRIMARY KEY DEFAULT nextval('id_for_xp'),
-    "check"   bigint NOT NULL check ( fnc_verter_success("check") ),
+    "check"   bigint NOT NULL check ( fnc_p2p_or_verter_success("check") ),
     XP_amount smallint NOT NULL check ( fnc_xp_lq_max("check", XP_amount) ),
     FOREIGN KEY ("check") references checks(id));
-
-
 
 -- INSERT data
 INSERT INTO Peers (Nickname, Birthday)
@@ -475,38 +485,38 @@ VALUES (1,'start','10:45:03'),
         (34,'success','22:45:31');
 
 
-INSERT INTO xp (id, "check", XP_amount)
-VALUES (1,1,189),
-        (2,2,360),
-        (3,3,733),
-        (4,4,200),
-        (5,5,455),
-        (6,6,599),
-        (7,7,199),
-        (8,8,433),
-        (9,10,750),
-        (10,11,200),
-        (11,12,450),
-        (12,13,743),
-        (13,14,200),
-        (14,15,500),
-        (15,16,750),
-        (16,17,200),
-        (17,18,399),
-        (18,19,750),
-        (19,21,299),
-        (20,22,300),
-        (21,23,255),
-        (22,24,200),
-        (23,25,600),
-        (24,26,300),
-        (25,27,277),
-        (26,28,345),
-        (27,29,350),
-        (28,30,580),
-        (29,31,600),
-        (30,33,289),
-        (31,34,330);
+INSERT INTO xp ("check", XP_amount)
+VALUES (1,189),
+        (2,360),
+        (3,733),
+        (4,200),
+        (5,455),
+        (6,599),
+        (7,199),
+        (8,433),
+        (10,750),
+        (11,200),
+        (12,450),
+        (13,743),
+        (14,200),
+        (15,500),
+        (16,750),
+        (17,200),
+        (18,399),
+        (19,750),
+        (21,299),
+        (22,300),
+        (23,255),
+        (24,200),
+        (25,600),
+        (26,300),
+        (27,277),
+        (28,345),
+        (29,350),
+        (30,580),
+        (31,600),
+        (33,289),
+        (34,330);
 
 
 
