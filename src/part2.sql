@@ -7,7 +7,7 @@ DROP PROCEDURE IF EXISTS proc_dependency_lookup_for_verter(id_to_check BIGINT, s
 DROP PROCEDURE IF EXISTS proc_adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
 DROP PROCEDURE IF EXISTS proc_adding_p2p(checked_peer_checks VARCHAR, checking_peer_p2p VARCHAR, "title_tasks" VARCHAR, state_p2p check_state, time_to_checks time);
 
-DROP TRIGGER IF EXISTS trg_person_audit ON p2p CASCADE;
+DROP TRIGGER IF EXISTS trg_person_points ON p2p CASCADE;
 DROP FUNCTION IF EXISTS fnc_trg_TransferredPoints();
 
 -- ex1
@@ -190,7 +190,9 @@ CALL proc_adding_verter('kennethgraham', 'CPP2_s21_containers', 'start' , curren
 CALL proc_adding_verter('josepayne', 'CPP2_s21_containers', 'start' , current_time::time);
 
 
---- ex3
+--------------------------------------------------------
+------------------------  ex03  ------------------------
+--------------------------------------------------------
 CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
 RETURNS TRIGGER AS
 $TransferredPoints$
@@ -216,8 +218,68 @@ TO_BE BIGINT := (select t.id::BIGINT
 $TransferredPoints$
 LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_person_audit
+CREATE TRIGGER trg_person_points
 AFTER INSERT ON p2p
     FOR EACH ROW EXECUTE FUNCTION fnc_trg_TransferredPoints();
 
--- test for ex3
+
+
+-- ************************************************ --
+------------------- tests ex03 -----------------------
+------------------------------------------------------
+
+
+----- test 01
+
+
+----- test 02
+
+
+----- test 03
+
+
+
+
+
+--------------------------------------------------------
+------------------------  ex04  ------------------------
+--------------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION insert_xp() RETURNS TRIGGER
+    LANGUAGE plpgsql AS
+$INSERT_XP$
+         BEGIN
+    IF NOT (verter_success(NEW."check")) THEN
+        RETURN NULL;
+        ELSE
+            IF NOT (xp_lq_max(NEW."check", NEW.xp_amount)) THEN
+                RAISE EXCEPTION 'More than max_xp in check %', NEW."check";
+                ELSE
+                RETURN NEW;
+            END IF;
+            END IF;
+            END;
+$INSERT_XP$;
+
+CREATE TRIGGER trg_pre_adding_xp
+    BEFORE INSERT
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION insert_xp();
+
+
+-- ************************************************ --
+------------------- tests ex04 -----------------------
+------------------------------------------------------
+
+
+----- test 01
+
+
+----- test 02
+
+
+----- test 03
+
+
