@@ -316,16 +316,46 @@ AFTER INSERT ON p2p
 ------------------- tests ex03 -----------------------
 ------------------------------------------------------
 
-
+-----
 ----- test 01
+-----
+INSERT INTO checks (id,peer, task, date)
+VALUES ( 100,'frankray','A1_MAZE', CURRENT_DATE);
+INSERT INTO p2p ("check", checkingpeer, "state", "time")
+VALUES (100,'lorigarrett','start',current_time),
+(100,'lorigarrett','success',current_time + '00:25:30'::TIME);
 
-
+SELECT * FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
+DELETE FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
+DELETE FROM p2p WHERE "check" = 100;
+DELETE FROM checks WHERE id = 100;
+-----
 ----- test 02
+-----
+INSERT INTO checks (id,peer, task, date)
+VALUES ( 101,'frankray','A2_SimpleNavigator v1.0', CURRENT_DATE);
+INSERT INTO p2p ("check", checkingpeer, "state", "time")
+VALUES (101,'lorigarrett','start',current_time),
+(101,'lorigarrett','fail',current_time + '00:25:30'::TIME);
 
+SELECT * FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
 
+DELETE FROM transferredpoints WHERE checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray';
+DELETE FROM p2p WHERE "check" = 101;
+DELETE FROM checks WHERE id = 101;
+-----
 ----- test 03
+-----
+INSERT INTO checks (id,peer, task, date)
+VALUES ( 102,'lorigarrett','C6_s21_matrix', CURRENT_DATE);
+INSERT INTO p2p ("check", checkingpeer, "state", "time")
+VALUES (102,'frankray','start',current_time),
+(102,'frankray','fail',current_time + '00:25:30'::TIME);
 
-
+SELECT * FROM transferredpoints WHERE( checkingpeer = 'lorigarrett' AND checkedpeer = 'frankray') OR  (checkedpeer  = 'lorigarrett' AND checkingpeer = 'frankray');
+DELETE FROM transferredpoints WHERE checkedpeer = 'lorigarrett' AND checkingpeer = 'frankray';
+DELETE FROM p2p WHERE "check" = 102;
+DELETE FROM checks WHERE id = 102;
 
 
 
