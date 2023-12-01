@@ -1,3 +1,5 @@
+-- DROP ALL
+
 DROP PROCEDURE IF EXISTS proc_dependency_lookup(peer_dep VARCHAR, task_dep VARCHAR, state_dep check_state);
 DROP PROCEDURE IF EXISTS proc_must_have_project_done(peer_dep VARCHAR, task_dep VARCHAR);
 DROP PROCEDURE IF EXISTS proc_must_have_project_done(peer_dep VARCHAR, task_dep VARCHAR);
@@ -7,6 +9,8 @@ DROP PROCEDURE IF EXISTS proc_adding_p2p(checked_peer_checks VARCHAR, checking_p
 
 DROP TRIGGER IF EXISTS trg_person_audit ON p2p CASCADE;
 DROP FUNCTION IF EXISTS fnc_trg_TransferredPoints();
+
+-- ex1
 
 CREATE OR REPLACE PROCEDURE proc_must_have_project_done(peer_dep VARCHAR(255), task_dep VARCHAR(255))
     LANGUAGE plpgsql AS
@@ -23,13 +27,11 @@ BEGIN
                                  WHERE c.peer = peer_dep
                                  ORDER BY date DESC
                                  LIMIT 1)
-    SELECT v.state
+    SELECT *
     INTO state_of_must_have_project
-    FROM verter v
-             JOIN needed_id_of_checks nc ON nc.id = v."check"
-    ORDER BY v.time DESC
-    LIMIT 1;
-    IF state_of_must_have_project IS NULL AND state_of_must_have_project != 'success'::check_state THEN
+    FROM xp
+             JOIN needed_id_of_checks nc ON nc.id = xp."check";
+    IF state_of_must_have_project IS NULL THEN
         RAISE EXCEPTION 'Must have project not done';
     END IF;
 END;
@@ -77,7 +79,49 @@ CREATE OR REPLACE PROCEDURE proc_adding_p2p(checked_peer_checks  VARCHAR(255), c
     END;
     $ADDING_P2P$;
 
--- CALL proc_adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
+-- tests for ex 1
+
+SELECT *
+FROM checks c
+         JOIN p2p p on c.id = p."check"
+WHERE c.peer = 'troybrown'
+  AND c.task = 'CPP2_s21_containers';
+
+CALL proc_adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
+
+SELECT *
+FROM checks c
+         JOIN p2p p on c.id = p."check"
+WHERE c.peer = 'troybrown'
+  AND c.task = 'CPP2_s21_containers';
+
+-- проверка на то, что запись не добавится, т.к. родительский проект DO1_Linux невыполнен
+CALL proc_adding_p2p('troybrown', 'laurenwood', 'DO2_Linux_Network', 'start', current_time::time);
+
+SELECT *
+FROM checks c
+         JOIN p2p p on c.id = p."check"
+WHERE c.peer = 'troybrown'
+  AND c.task = 'DO1_Linux';
+
+-- проверка на то, что что записи не добавятся, в случае если в таблице ХР не начислен опыт за родитлеьский проект
+
+CALL proc_adding_p2p('laurenwood', 'troybrown', 'CPP2_s21_containers', 'start', current_time::time);
+
+-- ex2
+
+WITH needed_task AS (SELECT parent_task accept_task
+                         FROM tasks
+                         WHERE title = 'CPP2_s21_containers'),
+         needed_id_of_checks AS (SELECT c.id
+                                 FROM checks c
+                                          JOIN needed_task nt ON nt.accept_task = c.task
+                                 WHERE c.peer = 'laurenwood'
+                                 ORDER BY date DESC
+                                 LIMIT 1)
+    SELECT *
+    FROM xp
+             JOIN needed_id_of_checks nc ON nc.id = xp."check";
 
 CREATE OR REPLACE PROCEDURE proc_dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
 LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
@@ -127,12 +171,26 @@ LANGUAGE plpgsql AS $ADDING_VERTER$
     END;
     $ADDING_VERTER$;
 
--- CALL proc_adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
---
--- DELETE FROM verter where id = 28;
---
--- DROP PROCEDURE proc_adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
+-- tests for ex2
+-- проверка на то, что не добавляется запись, в случае, если нет успешной по чек проверки в таблице п2п
 
+CALL proc_adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
+
+-- проверка на то, что данные повторно не добавятся в таблицу вертер
+
+SELECT *
+FROM checks c
+         JOIN verter v on c.id = v."check"
+WHERE peer = 'kennethgraham'
+  AND task = 'CPP2_s21_containers';
+
+CALL proc_adding_verter('kennethgraham', 'CPP2_s21_containers', 'start' , current_time::time);
+
+-- проверка на то, что данные, которых нет в таблицу п2п не добавятся
+CALL proc_adding_verter('josepayne', 'CPP2_s21_containers', 'start' , current_time::time);
+
+
+--- ex3
 CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
 RETURNS TRIGGER AS
 $TransferredPoints$
@@ -161,3 +219,5 @@ LANGUAGE plpgsql;
 CREATE TRIGGER trg_person_audit
 AFTER INSERT ON p2p
     FOR EACH ROW EXECUTE FUNCTION fnc_trg_TransferredPoints();
+
+-- test for ex3
