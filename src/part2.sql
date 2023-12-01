@@ -77,7 +77,7 @@ CREATE OR REPLACE PROCEDURE proc_adding_p2p(checked_peer_checks  VARCHAR(255), c
     END;
     $ADDING_P2P$;
 
--- CALL adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
+-- CALL proc_adding_p2p('troybrown', 'laurenwood', 'CPP2_s21_containers', 'start', current_time::time);
 
 CREATE OR REPLACE PROCEDURE proc_dependency_lookup_for_verter(id_to_check BIGINT, state_dep check_state)
 LANGUAGE plpgsql AS $DEPENDENCY_LOOKUP_VERTER$
@@ -127,11 +127,11 @@ LANGUAGE plpgsql AS $ADDING_VERTER$
     END;
     $ADDING_VERTER$;
 
--- CALL adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
+-- CALL proc_adding_verter('troybrown', 'CPP2_s21_containers', 'success' , current_time::time);
 --
 -- DELETE FROM verter where id = 28;
 --
--- DROP PROCEDURE adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
+-- DROP PROCEDURE proc_adding_verter(peer_from_checks VARCHAR, task_from_checks VARCHAR, state_to_verter check_state, time_to_verter time);
 
 CREATE OR REPLACE FUNCTION  fnc_trg_TransferredPoints()
 RETURNS TRIGGER AS
