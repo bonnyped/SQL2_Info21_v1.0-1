@@ -314,7 +314,7 @@ CREATE OR REPLACE PROCEDURE proc_peers_ended_this_block(block_name VARCHAR(255),
     LANGUAGE plpgsql AS $FIND_PEERS_ENDED_BLOCK$
     BEGIN
         open result_ for
-            WITH first_project_of_core AS (SELECT t.title FROM tasks t WHERE parent_task IS NULL),
+            WITH first_project_of_core AS (SELECT t.title FROM tasks t WHERE parent_task = ''),
                  last_project_from_block1 AS (SELECT t2.parent_task
                                               FROM tasks t2
                                               WHERE substring(t2.title, '[A-Z]+') !=
@@ -357,6 +357,21 @@ FETCH ALL FROM result_query;
 close result_query;
 END;
 
+-------
+
+BEGIN;
+CALL proc_peers_ended_this_block('CPP');
+FETCH ALL FROM result_query;
+close result_query;
+END;
+
+-------
+
+BEGIN;
+CALL proc_peers_ended_this_block('A');
+FETCH ALL FROM result_query;
+close result_query;
+END;
 --------------------------------------------
 -------------------- 08 --------------------
 --------------------------------------------
