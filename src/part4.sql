@@ -7,9 +7,15 @@
 -------------------------------------------
 ---------------- DROP ALL -----------------
 -------------------------------------------
-
+DROP TRIGGER IF EXISTS trg_tables_b_delete ON TableName_b;
+DROP TRIGGER IF EXISTS trg_tables_b_update ON TableName_b;
+DROP EVENT TRIGGER IF EXISTS trg_on_create_table;
 DROP TRIGGER IF EXISTS trg_tables_a_insert ON TableName_a;
 DROP TRIGGER IF EXISTS trg_tables_b_insert ON TableName_b;
+DROP FUNCTION IF EXISTS fnc_trg_create_table;
+DROP FUNCTION IF EXISTS fnc_trg_tables_b_delete;
+DROP FUNCTION IF EXISTS fnc_trg_tables_b_update;
+
 DROP FUNCTION IF EXISTS fnc_trg_tables_a_insert;
 DROP FUNCTION IF EXISTS fnc_trg_tables_b_insert;
 DROP TABLE IF EXISTS TableName_a;
@@ -98,9 +104,56 @@ END;
 $TransferredPoints$
 LANGUAGE plpgsql;
 
+
 CREATE TRIGGER trg_tables_b_insert
-AFTER INSERT ON TableName_b
+BEFORE INSERT ON TableName_b
 FOR EACH ROW EXECUTE FUNCTION fnc_trg_tables_b_insert();
+
+-------
+
+CREATE OR REPLACE FUNCTION  fnc_trg_tables_b_update()
+RETURNS TRIGGER AS 
+$TransferredPoints$ 
+BEGIN 
+    RETURN NULL;
+END;
+$TransferredPoints$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_tables_b_update
+BEFORE UPDATE ON TableName_b
+FOR EACH ROW EXECUTE FUNCTION fnc_trg_tables_b_update();
+
+-------
+
+CREATE OR REPLACE FUNCTION  fnc_trg_tables_b_delete()
+RETURNS TRIGGER AS 
+$TransferredPoints$ 
+BEGIN 
+    RETURN NULL;
+END;
+$TransferredPoints$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_tables_b_delete
+BEFORE DELETE ON TableName_b
+FOR EACH ROW EXECUTE FUNCTION fnc_trg_tables_b_delete();
+
+----------
+
+CREATE OR REPLACE FUNCTION fnc_trg_create_table()
+RETURNS event_trigger AS $$
+BEGIN
+    -- 
+END
+$$
+LANGUAGE plpgsql;
+
+CREATE   EVENT  TRIGGER trg_on_create_table 
+ON ddl_command_end
+WHEN TAG IN ('CREATE TABLE')
+EXECUTE PROCEDURE fnc_trg_create_table();
+
 
 CREATE OR REPLACE FUNCTION  fnc_trg_tables_a_insert()
 RETURNS TRIGGER AS 
@@ -112,7 +165,7 @@ $TransferredPoints$
 LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_tables_a_insert
-AFTER INSERT ON TableName_a
+BEFORE INSERT ON TableName_a
     FOR EACH ROW EXECUTE FUNCTION fnc_trg_tables_a_insert();
 
 
@@ -146,6 +199,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE proc_hello_peer(peer_name VARCHAR(255))
+    LANGUAGE plpgsql AS $TEST$
+    BEGIN
+    END;
+$TEST$;
+
+CREATE OR REPLACE PROCEDURE proc_kill_peers()
+    LANGUAGE plpgsql AS $TEST$
+    DECLARE
+        status_peer VARCHAR DEFAULT 'I am dead!';
+    BEGIN
+    END;
+$TEST$;
+
 -------------------------------------------
 ------------------ 01 ---------------------
 -------------------------------------------
@@ -174,7 +241,7 @@ $DROP_TABLE_NAME$;
 -------------- test ex01 ------------------
 
 -- CALL proc_drop_tables();
-
+-- SELECT * FROM pg_catalog.pg_tables WHERE schemaname = "current_schema"();
 -------------------------------------------
 ------------------ 02 ---------------------
 -------------------------------------------
@@ -314,6 +381,7 @@ BEGIN
     for list in
         SELECT trigger_name AS trigger_n, event_object_table AS table_n
         FROM  information_schema.triggers
+        WHERE event_manipulation = 'INSERT' OR event_manipulation = 'SELECT' OR event_manipulation = 'UPDATE' OR event_manipulation = 'DELETE'
     LOOP
         statement1 := format('DROP TRIGGER IF EXISTS %s ON %s;',quote_ident(list.trigger_n), quote_ident(list.table_n));
         EXECUTE statement1;
@@ -371,10 +439,10 @@ $PRINT_OBJECTS$;
 
 
 --***************************************--
--------------- test ex03 ------------------
+-------------- test ex04 ------------------
 
 -- BEGIN;
--- CALL proc_print_name_objects('END;');
+-- CALL proc_print_name_objects('I am dead!');
 -- FETCH ALL FROM "_print";
 -- END;
 
@@ -390,3 +458,5 @@ $PRINT_OBJECTS$;
 
 --***************************************--
 --***************************************--
+
+
