@@ -276,26 +276,33 @@ SELECT * FROM fnc_point_changes();
 --------------------------------------------
 -------------------- 06 --------------------
 --------------------------------------------
-WITH agregate_tasks AS (
-    SELECT count(task) as count_t,
-        date,
-        task
-    FROM checks c
-    GROUP BY date,
-        task
-    ORDER BY date
-),
-only_max_values AS (
-    SELECT max(at.count_t) max_number,
-        at.date "day"
-    FROM agregate_tasks at
-    GROUP BY 2
-)
-SELECT omv.day,
-    split_part(at.task, '_', 1)
-FROM only_max_values omv
-    JOIN agregate_tasks at ON omv.max_number = at.count_t
-    AND omv.day = at.date;
+CREATE OR REPLACE PROCEDURE proc_find_max_popular_success_task_per_day(INOUT result_ REFCURSOR DEFAULT 'result_query')
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    open result_ for
+    WITH agregate_tasks AS (
+        SELECT count(task) as count_t,
+               date,
+               task
+        FROM checks c
+        GROUP BY date,
+                 task
+        ORDER BY date
+    ),
+         only_max_values AS (
+             SELECT max(at.count_t) max_number,
+                    at.date         "day"
+             FROM agregate_tasks at
+             GROUP BY 2
+         )
+    SELECT omv.day,
+           split_part(at.task, '_', 1)
+    FROM only_max_values omv
+             JOIN agregate_tasks at ON omv.max_number = at.count_t
+        AND omv.day = at.date;
+END;
+$$;
 
 
 --****************************************--
@@ -303,7 +310,10 @@ FROM only_max_values omv
 --****************************************--
 
 
---- ????????????????????????
+BEGIN;
+CALL proc_find_max_popular_success_task_per_day();
+FETCH ALL FROM result_query;
+END;
 
 --------------------------------------------
 -------------------- 07 --------------------
