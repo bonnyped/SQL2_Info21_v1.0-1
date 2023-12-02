@@ -362,7 +362,7 @@ END;
 --------------- TEST EX07 ------------------
 --****************************************--
 BEGIN;
-CALL proc_peers_ended_this_block('C');
+CALL proc_peers_ended_this_block('Cpp');
 FETCH ALL FROM result_query;
 close result_query;
 END;
@@ -633,33 +633,12 @@ BEGIN;
 call proc_third_task_not_completed(
    'CPP1_s21_matrix+',
    'CPP2_s21_containers',
-   'CPP3_SmartCalc_v2.0'
+   'A2_SimpleNavigator v1.0'
 );
 FETCH ALL FROM "result";
 END;
 
 
-CREATE OR REPLACE PROCEDURE proc_view_number_of_parent_projects(INOUT reslut REFCURSOR DEFAULT 'result_query')
-    LANGUAGE plpgsql AS
-$$
-BEGIN
-    open reslut for
-    WITH RECURSIVE task_parents ("taskProject", "numberPerentsTask") AS (
-        SELECT t1.title AS "taskProject",
-               0        AS numberPerentsTask
-        FROM tasks AS t1
-        WHERE parent_task IS NULL
-           OR parent_task = ''
-        UNION ALL
-        SELECT t2.title,
-               "numberPerentsTask" + 1 AS numberPerentsTask
-        FROM task_parents AS tp
-                 INNER JOIN tasks AS t2 ON tp."taskProject" = t2.parent_task
-    )
-    SELECT *
-    FROM task_parents;
-END;
-$$;
 ---------------
 BEGIN;
 CALL proc_third_task_not_completed(
@@ -683,6 +662,8 @@ END;
 --------------------------------------------
 -------------------- 12 --------------------
 --------------------------------------------
+
+
 CREATE OR REPLACE PROCEDURE proc_number_of_parents(INOUT result_ REFCURSOR DEFAULT 'result_query')
     LANGUAGE plpgsql AS
 $$
@@ -758,83 +739,61 @@ $STATISTIC_CHECKS$;
 
 
 -- Head Function
+
 CREATE OR REPLACE PROCEDURE fnc_find_good_days_for_checks
     (
     N BIGINT DEFAULT 3,
     IN _result_two refcursor DEFAULT 'result'
-    ) 
-LANGUAGE plpgsql AS
-$GOOD_DAYS_FOR_CHECKS$
+    ) LANGUAGE plpgsql AS
+$STATISTIC$ 
+DECLARE
+    a TEXT[];
+    list RECORD;
+    number_s  BIGINT DEFAULT 0;
+    last_date DATE DEFAULT (SELECT min(date_check) FROM fnc_statistic_checks());
+    list_out TEXT DEFAULT '';
 BEGIN
-OPEN _result_two for
-WITH fail_checks AS (
-    SELECT DISTINCT f1.date_check,
-        f1.time_begin_p2p,
-        f1.status_check
-    FROM fnc_statistic_checks() AS f1
-    WHERE f1.status_check = 'fail'
-    ORDER BY 1,
-        2
-),
-determinant_table AS (
-    SELECT DISTINCT f.date_check AS fd,
-        f.time_begin_p2p AS ft,
-        f.status_check AS fs,
-        a.date_check,
-        a.time_begin_p2p,
-        a.status_check
-    FROM fail_checks AS f
-        FULL JOIN fnc_statistic_checks() AS a ON a.date_check = f.date_check
-    WHERE a.status_check = 'success'
-    ORDER BY 1,
-        2
-),
-before_fail AS (
-    SELECT DISTINCT dt1."date_check",
-        dt1.time_begin_p2p,
-        count(*) AS continuous_success
-    FROM determinant_table AS dt1
-    WHERE dt1.ft < dt1.time_begin_p2p
-    GROUP BY dt1."date_check",
-        dt1.time_begin_p2p
-),
-after_fail AS (
-    SELECT dt2."date_check",
-        dt2.time_begin_p2p,
-        count(*) AS continuous_success
-    FROM determinant_table AS dt2
-    WHERE dt2.ft > dt2.time_begin_p2p
-    GROUP BY dt2."date_check",
-        dt2.time_begin_p2p
-),
-without_feil AS (
-    SELECT dt3."date_check",
-        count(*) AS continuous_success
-    FROM determinant_table AS dt3
-    WHERE dt3.ft IS NULL
-    GROUP BY dt3."date_check"
-    ORDER BY 1,
-        2 DESC
-),
-all_success_day AS (
-    SELECT bf."date_check",
-        count(*) AS continuous_success
-    FROM before_fail AS bf
-    GROUP BY bf."date_check"
-    UNION ALL
-    SELECT af."date_check",
-        count(*) AS continuous_success
-    FROM after_fail AS af
-    GROUP BY af."date_check"
-    UNION ALL
-    SELECT *
-    FROM without_feil
-)
-SELECT DISTINCT TO_CHAR (date_check, 'DD FMMonth yyyy (FMDAY)') AS "GoodDaysForChecks"
-FROM all_success_day
-WHERE continuous_success >= N;
+    for list in
+        SELECT * FROM fnc_statistic_checks() ORDER BY 2,3
+LOOP
+    IF list.date_check != last_date  THEN
+        IF number_s >= N THEN
+            RAISE NOTICE '%', TO_CHAR (last_date, 'DD FMMonth yyyy (FMDAY)');
+            IF list_out = '' THEN
+                list_out := format('%s,', last_date);
+            ELSE
+                list_out := format('%s%s,',list_out, last_date);
+            END IF;
+        END IF;
+        number_s := 0;
+    END IF;
+    IF list.status_check = 'success'THEN
+                number_s := number_s + 1;
+    ELSE
+        IF number_s >= N THEN
+                    RAISE NOTICE '%', TO_CHAR (list.date_check, 'DD FMMonth yyyy (FMDAY)');
+            IF list_out = '' THEN
+                list_out := format('%s,', list.date_check);
+            ELSE
+                list_out := format('%s%s,',list_out, list.date_check);
+            END IF;
+        END IF;
+        number_s := 0;
+    END IF;
+           
+    last_date := list.date_check;
+END LOOP;
+    IF list_out = '' THEN 
+    RAISE NOTICE ' NO GoodDaysForChecks';
+    OPEN _result_two for
+        SELECT ' NO GoodDaysForChecks';
+    ELSE
+    a := string_to_array(list_out, ',') ;
+    OPEN _result_two for
+        SELECT  TO_CHAR (id::DATE, 'DD FMMonth yyyy (FMDAY)') AS "GoodDaysForChecks" FROM unnest(a)AS id  WHERE id != '' ;
+    END IF;
 END;
-$GOOD_DAYS_FOR_CHECKS$;
+$STATISTIC$;
 
 
 --****************************************--
@@ -843,7 +802,7 @@ $GOOD_DAYS_FOR_CHECKS$;
 -- DEFAULT value = 3 and 'result'
 
 BEGIN;
-call fnc_find_good_days_for_checks();
+call fnc_find_good_days_for_checks(4);
 FETCH ALL FROM "result";
 END;
 
@@ -853,13 +812,15 @@ FETCH ALL FROM "result";
 END;
 --
 BEGIN;
-call fnc_find_good_days_for_checks(1);
+call fnc_find_good_days_for_checks22(1);
 FETCH ALL FROM "result";
 END;
 
 -- test function fnc_statistic_checks
 SELECT * FROM fnc_statistic_checks() ORDER BY 2,3;
-SELECT * FROM fnc_statistic_checks() WHERE date_check = '2023-01-01' ORDER BY 3;
+SELECT * FROM fnc_statistic_checks() WHERE date_check = '2023-02-28' ORDER BY 3;
+
+
 --------------------------------------------
 -------------------- 14 --------------------
 --------------------------------------------
@@ -1077,3 +1038,95 @@ BEGIN;
 CALL proc_early_entries_permonth();
 FETCH ALL FROM result_query;
 END;
+
+
+---??????????????????
+January  | 0
+
+---??????????????????
+
+
+
+
+
+
+
+
+
+-- CREATE OR REPLACE PROCEDURE fnc_find_good_days_for_checks
+--     (
+--     N BIGINT DEFAULT 3,
+--     IN _result_two refcursor DEFAULT 'result'
+--     ) 
+-- LANGUAGE plpgsql AS
+-- $GOOD_DAYS_FOR_CHECKS$
+-- BEGIN
+-- OPEN _result_two for
+-- WITH fail_checks AS (
+--     SELECT DISTINCT f1.date_check,
+--         f1.time_begin_p2p,
+--         f1.status_check
+--     FROM fnc_statistic_checks() AS f1
+--     WHERE f1.status_check = 'fail'
+--     ORDER BY 1,
+--         2
+-- ),
+-- determinant_table AS (
+--     SELECT DISTINCT f.date_check AS fd,
+--         f.time_begin_p2p AS ft,
+--         f.status_check AS fs,
+--         a.date_check,
+--         a.time_begin_p2p,
+--         a.status_check
+--     FROM fail_checks AS f
+--         FULL JOIN fnc_statistic_checks() AS a ON a.date_check = f.date_check
+--     WHERE a.status_check = 'success'
+--     ORDER BY 1,
+--         2
+-- ),
+-- before_fail AS (
+--     SELECT DISTINCT dt1."date_check",
+--         dt1.time_begin_p2p,
+--         count(*) AS continuous_success
+--     FROM determinant_table AS dt1
+--     WHERE dt1.ft < dt1.time_begin_p2p
+--     GROUP BY dt1."date_check",
+--         dt1.time_begin_p2p
+-- ),
+-- after_fail AS (
+--     SELECT dt2."date_check",
+--         dt2.time_begin_p2p,
+--         count(*) AS continuous_success
+--     FROM determinant_table AS dt2
+--     WHERE dt2.ft > dt2.time_begin_p2p
+--     GROUP BY dt2."date_check",
+--         dt2.time_begin_p2p
+-- ),
+-- without_feil AS (
+--     SELECT dt3."date_check",
+--         count(*) AS continuous_success
+--     FROM determinant_table AS dt3
+--     WHERE dt3.ft IS NULL
+--     GROUP BY dt3."date_check"
+--     ORDER BY 1,
+--         2 DESC
+-- ),
+-- all_success_day AS (
+--     SELECT bf."date_check",
+--         count(*) AS continuous_success
+--     FROM before_fail AS bf
+--     GROUP BY bf."date_check"
+--     UNION ALL
+--     SELECT af."date_check",
+--         count(*) AS continuous_success
+--     FROM after_fail AS af
+--     GROUP BY af."date_check"
+--     UNION ALL
+--     SELECT *
+--     FROM without_feil
+-- )
+-- SELECT DISTINCT TO_CHAR (date_check, 'DD FMMonth yyyy (FMDAY)') AS "GoodDaysForChecks"
+-- FROM all_success_day
+-- WHERE continuous_success >= N;
+-- END;
+-- $GOOD_DAYS_FOR_CHECKS$;
