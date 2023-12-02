@@ -25,111 +25,161 @@ DROP PROCEDURE IF EXISTS proc_is_it_new_check_verter("state_to_verter" check_sta
 --------------------------------------------------------
 
 
-CREATE OR REPLACE PROCEDURE proc_parrent_task_done(title_for_checks VARCHAR(255), peer_for_checks VARCHAR(255))
-    LANGUAGE plpgsql AS
+CREATE OR REPLACE PROCEDURE proc_parrent_task_done(
+        title_for_checks VARCHAR(255),
+        peer_for_checks VARCHAR(255)
+    ) LANGUAGE plpgsql AS 
 $$
-DECLARE
+DECLARE 
     parrent_task VARCHAR(255);
     parrent_task_checks_id BIGINT;
     xp_for_parrent_task SMALLINT;
-BEGIN
+BEGIN 
     RAISE INFO 'Start procedure to check parrent task dor % is done', title_for_checks;
-    parrent_task := (SELECT t.parent_task pt
-                              FROM tasks t
-                              WHERE t.title = title_for_checks);
-    parrent_task_checks_id := (SELECT c.id
-                               FROM checks c
-                               WHERE c.peer = peer_for_checks
-                                 AND c.task = parrent_task
-                               ORDER BY c.date DESC
-                               LIMIT 1);
-    xp_for_parrent_task := (SELECT xp_amount
-                            FROM xp
-                            WHERE xp."check" = parrent_task_checks_id);
-    IF xp_for_parrent_task IS NULL THEN
+    parrent_task := (
+        SELECT t.parent_task pt
+        FROM tasks t
+        WHERE t.title = title_for_checks
+    );
+    parrent_task_checks_id := (
+        SELECT c.id
+        FROM checks c
+        WHERE c.peer = peer_for_checks
+            AND c.task = parrent_task
+        ORDER BY c.date DESC
+        LIMIT 1
+    );
+    xp_for_parrent_task := (
+        SELECT xp_amount
+        FROM xp
+        WHERE xp."check" = parrent_task_checks_id
+    );
+    IF xp_for_parrent_task IS NULL THEN 
         RAISE 'Parrent task for % is not done', title_for_checks;
     END IF;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE proc_is_it_new_check(title_for_checks VARCHAR(255), peer_for_checks VARCHAR(255), state_for_p2p check_state)
-    LANGUAGE plpgsql AS
+CREATE OR REPLACE PROCEDURE proc_is_it_new_check(
+        title_for_checks VARCHAR(255),
+        peer_for_checks VARCHAR(255),
+        state_for_p2p check_state
+    ) LANGUAGE plpgsql AS
 $$
 DECLARE
-    start_state                     check_state DEFAULT 'start';
+    start_state check_state DEFAULT 'start';
     last_checks_id_with_this_params BIGINT;
-    p2p_state_for_checks_id         check_state;
-BEGIN
+    p2p_state_for_checks_id check_state;
+BEGIN 
     RAISE INFO 'Start procedure to check p2p with parametrs % and % and NOT is in state = start', peer_for_checks, title_for_checks;
-    last_checks_id_with_this_params := (SELECT c.id
-                                        FROM checks c
-                                        WHERE c.peer = peer_for_checks
-                                          AND c.task = title_for_checks
-                                        ORDER BY c.date DESC
-                                        LIMIT 1);
-    p2p_state_for_checks_id := (SELECT p.state
-                                FROM p2p p
-                                WHERE p."check" = last_checks_id_with_this_params
-                                ORDER BY p.time DESC
-                                LIMIT 1);
-    IF (p2p_state_for_checks_id != start_state AND state_for_p2p != start_state) OR
-       (p2p_state_for_checks_id = start_state AND state_for_p2p = start_state) OR
-       (last_checks_id_with_this_params IS NULL AND state_for_p2p != start_state)THEN
-        RAISE 'The check with this parametrs: % and % already been started or ended', peer_for_checks, title_for_checks
-            USING HINT =
-                    'You need to end opened check with this checks_id in table p2p or start new check. Your variant depending on parametr of state in new row of check';
+    last_checks_id_with_this_params := (
+        SELECT c.id
+        FROM checks c
+        WHERE c.peer = peer_for_checks
+            AND c.task = title_for_checks
+        ORDER BY c.date DESC
+        LIMIT 1
+    );
+    p2p_state_for_checks_id := (
+        SELECT p.state
+        FROM p2p p
+        WHERE p."check" = last_checks_id_with_this_params
+        ORDER BY p.time DESC
+        LIMIT 1
+    );
+    IF (
+        p2p_state_for_checks_id != start_state
+        AND state_for_p2p != start_state
+    )
+    OR (
+        p2p_state_for_checks_id = start_state
+        AND state_for_p2p = start_state
+    )
+    OR (
+        last_checks_id_with_this_params IS NULL
+        AND state_for_p2p != start_state
+    ) THEN 
+        RAISE 'The check with this parametrs: % and % already been started or ended',
+        peer_for_checks,
+        title_for_checks USING HINT = 'You need to end opened check with this checks_id in table p2p or start new check. Your variant depending on parametr of state in new row of check';
     END IF;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE proc_peers_not_eq(peer_for_checks VARCHAR(255), peer_for_p2p VARCHAR(255)) LANGUAGE plpgsql AS $$
-    BEGIN
-        RAISE INFO 'Start procedure thats compares peers nicknames';
-        IF peer_for_checks = peer_for_p2p THEN
-            RAISE EXCEPTION 'The peer can''t check itself';
-        END IF;
-    END;
-    $$;
-
-CREATE OR REPLACE PROCEDURE proc_insert_date_into_checks(peer_for_checks VARCHAR(255), title_for_checks VARCHAR(255),
-                                                         state_for_p2p check_state)
-    LANGUAGE plpgsql AS
+CREATE OR REPLACE PROCEDURE proc_peers_not_eq(
+        peer_for_checks VARCHAR(255),
+        peer_for_p2p VARCHAR(255)
+    ) LANGUAGE plpgsql AS
 $$
-BEGIN
+BEGIN 
+    RAISE INFO 'Start procedure thats compares peers nicknames';
+    IF peer_for_checks = peer_for_p2p THEN 
+        RAISE EXCEPTION 'The peer can''t check itself';
+    END IF;
+END;
+$$;
+CREATE OR REPLACE PROCEDURE proc_insert_date_into_checks(
+        peer_for_checks VARCHAR(255),
+        title_for_checks VARCHAR(255),
+        state_for_p2p check_state
+    ) LANGUAGE plpgsql AS
+$$
+BEGIN 
     IF state_for_p2p = 'start'::check_state THEN
         INSERT INTO checks(peer, task, date)
-        VALUES (peer_for_checks, title_for_checks, current_date::date);
+        VALUES (
+                peer_for_checks,
+                title_for_checks,
+                current_date::date
+            );
         RAISE INFO 'Adding date in checks is done';
     END IF;
-END ;
+END;
 $$;
-
-CREATE OR REPLACE PROCEDURE proc_insert_date_into_p2p(peer_for_p2p VARCHAR(255), state_for_p2p check_state,
-                                                      time_for_p2p time, checks_id BIGINT)
-    LANGUAGE plpgsql AS
+CREATE OR REPLACE PROCEDURE proc_insert_date_into_p2p(
+        peer_for_p2p VARCHAR(255),
+        state_for_p2p check_state,
+        time_for_p2p time,
+        checks_id BIGINT
+    ) LANGUAGE plpgsql AS 
 $$
 BEGIN
     INSERT INTO p2p("check", checkingpeer, "state", "time")
-    SELECT checks_id, peer_for_p2p, state_for_p2p, time_for_p2p;
+    SELECT checks_id,
+        peer_for_p2p,
+        state_for_p2p,
+        time_for_p2p;
     RAISE INFO 'Adding date in p2p is done';
 END;
 $$;
-
-CREATE OR REPLACE PROCEDURE prc_adding_p2p(peer_for_checks  VARCHAR(255), peer_for_p2p  VARCHAR(255),
-                                       title_for_checks VARCHAR(255), state_for_p2p check_state, time_for_p2p time)
-    LANGUAGE plpgsql AS $ADDING_P2P$
-    DECLARE
+CREATE OR REPLACE PROCEDURE prc_adding_p2p(
+        peer_for_checks VARCHAR(255),
+        peer_for_p2p VARCHAR(255),
+        title_for_checks VARCHAR(255),
+        state_for_p2p check_state,
+        time_for_p2p time
+    ) LANGUAGE plpgsql AS
+$ADDING_P2P$
+DECLARE
     checks_id BIGINT;
-    DECLARE
-    BEGIN
-    CALL proc_parrent_task_done(title_for_checks, peer_for_checks);
+DECLARE BEGIN CALL proc_parrent_task_done(title_for_checks, peer_for_checks);
     CALL proc_is_it_new_check(title_for_checks, peer_for_checks, state_for_p2p);
     CALL proc_peers_not_eq(peer_for_checks, peer_for_p2p);
     CALL proc_insert_date_into_checks(peer_for_checks, title_for_checks, state_for_p2p);
-    checks_id := (SELECT c.id FROM checks c WHERE c.peer = peer_for_checks AND c.task = title_for_checks);
-    CALL proc_insert_date_into_p2p(peer_for_p2p, state_for_p2p, time_for_p2p, checks_id);
-    END;
-    $ADDING_P2P$;
+    checks_id := (
+        SELECT c.id
+        FROM checks c
+        WHERE c.peer = peer_for_checks
+            AND c.task = title_for_checks
+    );
+    CALL proc_insert_date_into_p2p(
+        peer_for_p2p,
+        state_for_p2p,
+        time_for_p2p,
+        checks_id
+    );
+END;
+$ADDING_P2P$;
 
 -- ************************************************ --
 ------------------- tests ex01 -----------------------
