@@ -1,7 +1,12 @@
+--------------------------------------------
+----------- CREATE DATABASE ----------------
+--------------------------------------------
+
 -- CREATE DATABASE model_s21;
 
--- DROP ALL
-
+--------------------------------------------
+-------------- DROP ALL --------------------
+--------------------------------------------
 DROP TABLE IF EXISTS Friends  CASCADE ;
 DROP TABLE IF EXISTS TransferredPoints;
 DROP TABLE IF EXISTS Recommendations;
@@ -26,8 +31,9 @@ DROP PROCEDURE IF EXISTS  proc_export_all_tables_to_csv;
 DROP PROCEDURE IF EXISTS  proc_export_table_to_csv;
 DROP PROCEDURE IF EXISTS  proc_import_from_csv;
 
--- PROCEDURES EXPORT & IMPORT
-
+--------------------------------------------
+----- PROCEDURES EXPORT & IMPORT -----------
+--------------------------------------------
 CREATE OR REPLACE PROCEDURE proc_export_all_tables_to_csv(path TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_ALL_TABLES$
@@ -47,6 +53,7 @@ BEGIN
 END;
 $EXPORT_ALL_TABLES$;
 
+--------------------------------------------
 CREATE OR REPLACE PROCEDURE proc_export_table_to_csv(table_name_s21 TEXT, path_to_file TEXT, "delim" CHAR DEFAULT ',')
     LANGUAGE plpgsql AS
 $EXPORT_TABLE$
@@ -58,6 +65,8 @@ BEGIN
         EXECUTE statement;
 END;
    $EXPORT_TABLE$;
+
+--------------------------------------------
 
 CREATE OR REPLACE PROCEDURE proc_import_from_csv(in s21_table_name VARCHAR, in path_to_file text, delimiter_csv CHAR DEFAULT ',' )
 LANGUAGE plpgsql AS
@@ -79,7 +88,12 @@ IF (
 END;
 $IMPORT$;
 
--- FUNCTIONS CHECK
+--------------------------------------------
+---------- FUNCTIONS CHECK -----------------
+--------------------------------------------
+CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
+
+--------------------------------------------
 CREATE OR REPLACE FUNCTION fnc_p2p_success("checks_id" BIGINT)
 RETURNS BOOLEAN AS
 $$
@@ -91,8 +105,7 @@ END IF;
 END;
 $$ LANGUAGE PLpgSQL;
 
-CREATE TYPE check_state AS ENUM ('start', 'success', 'fail');
-
+--------------------------------------------
 CREATE OR REPLACE FUNCTION fnc_p2p_or_verter_success(id_for_check BIGINT) RETURNS boolean
     LANGUAGE plpgsql AS
 $$
@@ -117,6 +130,7 @@ BEGIN
 END;
 $$;
 
+--------------------------------------------
 CREATE OR REPLACE FUNCTION fnc_xp_lq_max("check" BIGINT, xp_amount SMALLINT) RETURNS boolean
     LANGUAGE plpgsql AS
     $$
@@ -134,11 +148,15 @@ CREATE OR REPLACE FUNCTION fnc_xp_lq_max("check" BIGINT, xp_amount SMALLINT) RET
         END;
     $$;
 
--- CREATE ALL
+--------------------------------------------
+------------- CREATE ALL -------------------
+--------------------------------------------
 CREATE SEQUENCE id_for_p2p;
 CREATE SEQUENCE id_for_checks;
 CREATE SEQUENCE id_for_verter;
 CREATE SEQUENCE id_for_xp;
+
+--------------------------------------------
 CREATE TABLE Peers (
     Nickname VARCHAR NOT NULL PRIMARY KEY UNIQUE,
     Birthday DATE NOT NULL default current_date::DATE
@@ -218,7 +236,9 @@ CREATE TABLE IF NOT EXISTS Xp (
     XP_amount smallint NOT NULL check ( fnc_xp_lq_max("check", XP_amount) ),
     FOREIGN KEY ("check") references checks(id));
 
--- INSERT data
+--------------------------------------------
+------------ INSERT data -------------------
+--------------------------------------------
 INSERT INTO Peers (Nickname, Birthday)
 VALUES ('kennethgraham', '1999-02-23'),
     ('nancywilson', '1978-06-08'),
@@ -404,13 +424,6 @@ INSERT INTO TransferredPoints (CheckingPeer,checkedpeer, PointsAmount)
     WHERE p2p."state" != 'start'
     GROUP BY  p2p.CheckingPeer, checks.Peer;
 
--- INSERT INTO TransferredPoints (id, CheckingPeer, CheckedPeer, PointsAmount)
--- VALUES
---     (1, 'nancywilson', 'kennethgraham', 2),
---     (2, 'frankray', 'kennethgraham', 1),
---     (3, 'kennethgraham', 'nancywilson', 1),
---     (4, 'laurenwood', 'troybrown', 1),
---     (5, 'nancymartinez', 'kennethgraham', 1);
 
 INSERT INTO verter (id, "check", "state", "time")
 VALUES (1,1,'start','10:45:03'),
@@ -470,8 +483,6 @@ VALUES (1,1,'start','10:45:03'),
         (55,33,'start','22:55:12'),
         (56,33,'success','22:55:33');
 
-
-
 INSERT INTO xp ("check", XP_amount)
 VALUES (1,189),
         (2,360),
@@ -506,22 +517,18 @@ VALUES (1,189),
         (34,330);
 
 
+-- ************************************** --
+--------- tests export/import  -------------
+--------------------------------------------
 
-
-
-
-
--- tests export/import !!!!!!!
-
-
--- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
--- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', ',');
+-- CALL export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', ',');
 -- TRUNCATE TABLE  Friends;
--- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
+-- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', ',')
 
-    -- tests export/import !!!!!!!
+-- tests 2 export/import !!!!!!!
 
-    --Clean tables (!need add other tables!)
+    --- Clean tables (!need add other tables!) ---
 -- TRUNCATE TABLE Peers CASCADE; -- очистит все таблицы которые с ней связаны внешним ключом
 -- TRUNCATE TABLE Friends;
 -- TRUNCATE TABLE TransferredPoints;
@@ -543,19 +550,19 @@ VALUES (1,189),
 -- CREATE SEQUENCE id_for_verter;
 -- CREATE SEQUENCE id_for_xp;
 
--- CALL proc_import_from_csv('peers', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/peers.csv', ';');
--- CALL proc_import_from_csv('tasks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/tasks.csv', ';');
--- CALL proc_import_from_csv('friends', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/friends.csv', ';');
--- CALL proc_import_from_csv('recommendations', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/recommendations.csv', ';');
--- CALL proc_import_from_csv('timetracking', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/timetracking.csv', ';');
+-- CALL proc_import_from_csv('peers', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/peers.csv', ',');
+-- CALL proc_import_from_csv('tasks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/tasks.csv', ',');
+-- CALL proc_import_from_csv('friends', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/friends.csv', ',');
+-- CALL proc_import_from_csv('recommendations', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/recommendations.csv', ',');
+-- CALL proc_import_from_csv('timetracking', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/timetracking.csv', ',');
 
--- CALL proc_import_from_csv('checks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/checks.csv', ';');
--- CALL proc_import_from_csv('p2p', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/p2p.csv', ';');
+-- CALL proc_import_from_csv('checks', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/checks.csv', ',');
+-- CALL proc_import_from_csv('p2p', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/p2p.csv', ',');
 -- CALL proc_import_from_csv('verter', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/verter.csv', ',');
--- CALL proc_import_from_csv('transferredpoints', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/transferredpoints.csv', ';');
+-- CALL proc_import_from_csv('transferredpoints', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/transferredpoints.csv', ',');
 -- CALL proc_import_from_csv('xp', 'YOUR_ABSOLUTLY_PATH_TO_FILE/csv/xp.csv', ',');
 
--- CALL proc_export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
--- CALL proc_export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', '&');
+-- CALL proc_export_all_tables_to_csv('YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', ',');
+-- CALL proc_export_table_to_csv('Friends','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/', ',');
 -- TRUNCATE TABLE  Friends;
--- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', '&')
+-- CALL proc_import_from_csv('FrieNds','YOUR_ABSOLUTLY_PATH_TO_FILE/csv/Friends.csv', ',')
