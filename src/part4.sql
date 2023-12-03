@@ -29,8 +29,8 @@ DROP PROCEDURE IF EXISTS proc_drop_triggers;
 DROP PROCEDURE IF EXISTS proc_print_name_objects;
 DROP FUNCTION IF EXISTS fnc_scalar_f;
 DROP FUNCTION IF EXISTS fnc_test_name;
-DROP FUNCTION IF EXISTS uppercase;
-DROP FUNCTION IF EXISTS add_numbers;
+DROP FUNCTION IF EXISTS fnc_uppercase;
+DROP FUNCTION IF EXISTS fnc_add_numbers;
 
 -------------------------------------------
 ------- CREATE TABLES TableName_* ---------
@@ -187,13 +187,13 @@ LANGUAGE plpgsql;
 
 -- select fnc_test_name(5);
 --
-CREATE OR REPLACE FUNCTION add_numbers(num1 INTEGER, num2 INTEGER) RETURNS INTEGER AS $$
+CREATE OR REPLACE FUNCTION fnc_add_numbers(num1 INTEGER, num2 INTEGER) RETURNS INTEGER AS $$
 BEGIN
     RETURN num1 + num2;
 END;
 $$ LANGUAGE plpgsql; 
 --
-CREATE OR REPLACE  FUNCTION uppercase(text_value TEXT) RETURNS TEXT AS $$
+CREATE OR REPLACE  FUNCTION fnc_uppercase(text_value TEXT) RETURNS TEXT AS $$
 BEGIN
     RETURN UPPER(text_value);
 END;
